@@ -24,14 +24,27 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         
+    - name: Debug - Show directory structure
+      run: |
+        echo "=== Current directory ==="
+        pwd
+        echo "=== Listing files ==="
+        ls -la
+        echo "=== Looking for manage.py ==="
+        find . -name "manage.py" -type f
+        echo "=== Looking for settings ==="
+        find . -name "settings.py" -type f
+        
     - name: Run database migrations
       run: |
+        cd algorithm_service
         python manage.py migrate
       env:
         SECRET_KEY: test-secret-key-for-ci-12345
         
     - name: Run search functionality tests
       run: |
+        cd algorithm_service
         python manage.py test algorithms.tests.SearchFunctionalityTests --verbosity=2
       env:
         SECRET_KEY: test-secret-key-for-ci-12345
