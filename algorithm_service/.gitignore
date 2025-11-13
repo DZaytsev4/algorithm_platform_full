@@ -1,7 +1,3 @@
-# Базы данных
-*.sqlite3
-*.db
-*.sqlite
 
 # Питон
 __pycache__/
