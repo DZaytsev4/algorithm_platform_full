@@ -3,6 +3,7 @@
 1. Форк к себе
 2. git clone ...
 3. pip install django 
+
 При обновление проекта и первом запуске:
 Заходим в папку с проектом и делаем следующие действия:
 1. python manage.py makemigrations 
