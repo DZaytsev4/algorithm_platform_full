@@ -32,12 +32,14 @@ jobs:
     
     - name: Install dependencies
       run: |
+        cd backend
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install coverage
     
     - name: Run migrations
       run: |
+        cd backend
         python manage.py migrate
       env:
         DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
@@ -45,6 +47,7 @@ jobs:
     
     - name: Run Search Test
       run: |
+        cd backend
         python manage.py test algorithms.tests.AlgorithmViewsTests.test_algorithm_search_filter --verbosity=2
       env:
         DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
@@ -53,7 +56,8 @@ jobs:
     
     - name: Run All Tests with Coverage
       run: |
-        coverage run --source='./algorithms' manage.py test algorithms.tests.AlgorithmViewsTests
+        cd backend
+        coverage run --source='.' manage.py test algorithms.tests.AlgorithmViewsTests
         coverage xml
         coverage report
         coverage html
@@ -61,13 +65,3 @@ jobs:
         DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
         SECRET_KEY: test-secret-key
         DEBUG: "False"
-    
-    - name: Upload coverage reports
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: coverage-reports
-        path: |
-          coverage.xml
-          htmlcov/
-        retention-days: 30
