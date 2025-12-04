@@ -50,8 +50,7 @@ class MainWindow(QMainWindow):
         self.search_input.setMinimumWidth(300)
         self.search_input.textChanged.connect(self.on_search_changed)
         
-        self.search_btn = QPushButton("🔍")
-        self.search_btn.setFixedSize(30, 30)
+        self.search_btn = QPushButton("🔍 Поиск")
         self.search_btn.setToolTip("Поиск")
         self.search_btn.clicked.connect(self.search_algorithms)
         
@@ -63,14 +62,13 @@ class MainWindow(QMainWindow):
         btn_layout = QHBoxLayout()
         btn_layout.setSpacing(5)
         
-        self.refresh_btn = QPushButton("🔄")
-        self.refresh_btn.setFixedSize(30, 30)
+        self.refresh_btn = QPushButton("🔄 Обновить")
         self.refresh_btn.setToolTip("Обновить")
         self.refresh_btn.clicked.connect(self.load_algorithms)
         
         self.create_btn = QPushButton("➕ Создать")
         self.create_btn.clicked.connect(self.create_algorithm)
-        self.create_btn.setEnabled(False)  # По умолчанию выключена
+        self.create_btn.setEnabled(False)
         
         self.logout_btn = QPushButton("🚪 Выход")
         self.logout_btn.clicked.connect(self.logout)
@@ -119,7 +117,7 @@ class MainWindow(QMainWindow):
         # Таймер для автообновления
         self.timer = QTimer()
         self.timer.timeout.connect(self.auto_refresh)
-        self.timer.start(60000)  # Каждую минуту
+        self.timer.start(60000)
         
         # Стили
         self.setStyleSheet("""
@@ -151,9 +149,17 @@ class MainWindow(QMainWindow):
                 padding: 6px 12px;
                 border-radius: 4px;
                 font-weight: bold;
+                border: 1px solid #ddd;
             }
             QPushButton:hover {
-                opacity: 0.9;
+                background-color: #e0e0e0;
+            }
+            QTableWidget {
+                gridline-color: #ddd;
+                selection-background-color: #e3f2fd;
+            }
+            QTableWidget::item {
+                padding: 4px;
             }
         """)
         
@@ -161,11 +167,11 @@ class MainWindow(QMainWindow):
         """Инициализация вкладки всех алгоритмов"""
         layout = QVBoxLayout(self.all_algorithms_tab)
         
-        # Таблица алгоритмов
+        # Таблица алгоритмов (без ID колонки)
         self.all_algorithms_table = QTableWidget()
-        self.all_algorithms_table.setColumnCount(7)
+        self.all_algorithms_table.setColumnCount(5)
         self.all_algorithms_table.setHorizontalHeaderLabels([
-            "ID", "Название", "Автор", "Теги", "Статус", "Дата", "Действия"
+            "Название", "Автор", "Теги", "Статус", "Действия"
         ])
         
         # Настройка таблицы
@@ -175,12 +181,10 @@ class MainWindow(QMainWindow):
         self.all_algorithms_table.setEditTriggers(QTableWidget.NoEditTriggers)
         
         # Настройка колонок
-        self.all_algorithms_table.setColumnWidth(0, 50)   # ID
-        self.all_algorithms_table.setColumnWidth(1, 200)  # Название
-        self.all_algorithms_table.setColumnWidth(2, 120)  # Автор
-        self.all_algorithms_table.setColumnWidth(3, 150)  # Теги
-        self.all_algorithms_table.setColumnWidth(4, 100)  # Статус
-        self.all_algorithms_table.setColumnWidth(5, 120)  # Дата
+        self.all_algorithms_table.setColumnWidth(0, 250)  # Название
+        self.all_algorithms_table.setColumnWidth(1, 150)  # Автор
+        self.all_algorithms_table.setColumnWidth(2, 200)  # Теги
+        self.all_algorithms_table.setColumnWidth(3, 100)  # Статус
         
         layout.addWidget(self.all_algorithms_table)
         
@@ -188,11 +192,11 @@ class MainWindow(QMainWindow):
         """Инициализация вкладки моих алгоритмов"""
         layout = QVBoxLayout(self.my_algorithms_tab)
         
-        # Таблица моих алгоритмов
+        # Таблица моих алгоритмов (без ID колонки)
         self.my_algorithms_table = QTableWidget()
-        self.my_algorithms_table.setColumnCount(7)
+        self.my_algorithms_table.setColumnCount(5)
         self.my_algorithms_table.setHorizontalHeaderLabels([
-            "ID", "Название", "Статус", "Модератор", "Дата создания", "Дата обновления", "Действия"
+            "Название", "Статус", "Дата создания", "Дата обновления", "Действия"
         ])
         
         # Настройка таблицы
@@ -222,11 +226,11 @@ class MainWindow(QMainWindow):
         
         layout.addLayout(mod_toolbar)
         
-        # Таблица модерации
+        # Таблица модерации (без ID колонки)
         self.moderation_table = QTableWidget()
-        self.moderation_table.setColumnCount(8)
+        self.moderation_table.setColumnCount(5)
         self.moderation_table.setHorizontalHeaderLabels([
-            "ID", "Название", "Автор", "Теги", "Дата создания", "Статус", "Действия", ""
+            "Название", "Автор", "Теги", "Дата создания", "Действия"
         ])
         
         # Настройка таблицы
@@ -260,7 +264,7 @@ class MainWindow(QMainWindow):
             self.user_label.setText("Гость")
             self.create_btn.setEnabled(False)
             self.tabs.setTabEnabled(2, False)
-    
+            
     def show_login_dialog(self):
         """Показать диалог входа"""
         dialog = LoginDialog(self.api, self)
@@ -270,58 +274,52 @@ class MainWindow(QMainWindow):
             self.load_current_user()
         else:
             QTimer.singleShot(100, self.close)
-    
+            
     def on_login_success(self):
         """Обработка успешного входа"""
         self.load_current_user()
-    
+        
     def load_algorithms(self):
-        """Загрузка всех алгоритмов"""
+        """Загрузка всех алгоритмов (только одобренные)"""
         search_text = self.search_input.text().strip()
-        algorithms = self.api.get_algorithms(search_text)
+        # Показываем только одобренные алгоритмы
+        algorithms = self.api.get_algorithms(search_text, show_all=False)
         self.update_all_algorithms_table(algorithms)
         self.status_label.setText(f"Загружено алгоритмов: {len(algorithms)}")
-    
+        
     def load_my_algorithms(self):
-        """Загрузка моих алгоритмов"""
+        """Загрузка моих алгоритмов (все статусы)"""
         if self.current_user:
             username = self.current_user.get('username')
             algorithms = self.api.get_user_algorithms(username)
             self.update_my_algorithms_table(algorithms)
-    
+            
     def load_moderation_list(self):
         """Загрузка списка на модерацию"""
         if self.current_user and self.current_user.get('is_staff'):
             algorithms = self.api.get_moderation_list()
             self.update_moderation_table(algorithms)
-    
+            
     def update_all_algorithms_table(self, algorithms):
         """Обновление таблицы всех алгоритмов"""
-        # Проверяем, что algorithms - это список
         if not isinstance(algorithms, list):
-            print(f"Ошибка: ожидался список, получен {type(algorithms)}")
             algorithms = []
         
         self.all_algorithms_table.setRowCount(len(algorithms))
         
         for row, algo in enumerate(algorithms):
-            # Проверяем, что algo - это словарь
             if not isinstance(algo, dict):
-                print(f"Пропускаем элемент {row}: не словарь")
                 continue
                 
-            # ID
-            self.all_algorithms_table.setItem(row, 0, QTableWidgetItem(str(algo.get('id', ''))))
-            
-            # Название
+            # Название (колонка 0)
             name_item = QTableWidgetItem(algo.get('name', ''))
             name_item.setToolTip(algo.get('name', ''))
-            self.all_algorithms_table.setItem(row, 1, name_item)
+            self.all_algorithms_table.setItem(row, 0, name_item)
             
-            # Автор
-            self.all_algorithms_table.setItem(row, 2, QTableWidgetItem(algo.get('author_name', '')))
+            # Автор (колонка 1)
+            self.all_algorithms_table.setItem(row, 1, QTableWidgetItem(algo.get('author_name', '')))
             
-            # Теги
+            # Теги (колонка 2)
             tags_list = algo.get('tags_list', [])
             if isinstance(tags_list, list):
                 tags = ", ".join(tags_list)
@@ -329,9 +327,9 @@ class MainWindow(QMainWindow):
                 tags = str(tags_list)
             tags_item = QTableWidgetItem(tags)
             tags_item.setToolTip(tags)
-            self.all_algorithms_table.setItem(row, 3, tags_item)
+            self.all_algorithms_table.setItem(row, 2, tags_item)
             
-            # Статус
+            # Статус (колонка 3)
             status = algo.get('status_display', '')
             if not status:
                 status = algo.get('status', '')
@@ -346,64 +344,70 @@ class MainWindow(QMainWindow):
             else:
                 status_item.setBackground(QColor(config.COLOR_PENDING))
             
-            self.all_algorithms_table.setItem(row, 4, status_item)
+            self.all_algorithms_table.setItem(row, 3, status_item)
             
-            # Дата создания
-            created = algo.get('created_at', '')
-            if created and len(created) >= 10:
-                created = created[:10]  # Берем только дату
-            self.all_algorithms_table.setItem(row, 5, QTableWidgetItem(created))
-            
-            # Действия
+            # Действия (колонка 4)
             actions_widget = QWidget()
             actions_layout = QHBoxLayout(actions_widget)
             actions_layout.setContentsMargins(5, 2, 5, 2)
             actions_layout.setSpacing(3)
             
-            # Кнопка просмотра
-            view_btn = QPushButton("👁")
-            view_btn.setFixedSize(30, 25)
-            view_btn.setToolTip("Просмотреть")
+            # Кнопка просмотра (текстом)
+            view_btn = QPushButton("Просмотр")
+            view_btn.setFixedSize(80, 25)
+            view_btn.setToolTip("Просмотреть алгоритм")
             view_btn.clicked.connect(lambda checked, a=algo: self.view_algorithm(a))
             actions_layout.addWidget(view_btn)
             
-            # Если это мой алгоритм или я модератор - добавляем кнопки редактирования/удаления
+            # Проверяем, является ли алгоритм текущего пользователя
+            is_my_algorithm = False
             if self.current_user:
-                can_edit = algo.get('can_edit', False)
-                can_moderate = algo.get('can_moderate', False)
-                
-                if can_edit or can_moderate:
-                    # Кнопка редактирования
-                    edit_btn = QPushButton("✏️")
-                    edit_btn.setFixedSize(30, 25)
-                    edit_btn.setToolTip("Редактировать")
-                    edit_btn.clicked.connect(lambda checked, a=algo: self.edit_algorithm(a))
-                    actions_layout.addWidget(edit_btn)
-                    
-                    # Кнопка удаления
-                    delete_btn = QPushButton("🗑")
-                    delete_btn.setFixedSize(30, 25)
-                    delete_btn.setToolTip("Удалить")
-                    delete_btn.clicked.connect(lambda checked, a=algo: self.delete_algorithm(a))
-                    actions_layout.addWidget(delete_btn)
+                current_username = self.current_user.get('username')
+                author_name = algo.get('author_name', '')
+                is_my_algorithm = current_username == author_name
             
-            self.all_algorithms_table.setCellWidget(row, 6, actions_widget)
+            # Проверяем, является ли пользователь модератором
+            is_moderator = self.current_user and self.current_user.get('is_staff', False)
+            
+            # Редактирование и удаление только для своих алгоритмов или модераторов
+            if is_my_algorithm or is_moderator:
+                # Кнопка редактирования (текстом)
+                edit_btn = QPushButton("Редакт.")
+                edit_btn.setFixedSize(70, 25)
+                edit_btn.setToolTip("Редактировать алгоритм")
+                edit_btn.clicked.connect(lambda checked, a=algo: self.edit_algorithm(a))
+                actions_layout.addWidget(edit_btn)
+                
+                # Кнопка удаления (текстом)
+                delete_btn = QPushButton("Удалить")
+                delete_btn.setFixedSize(70, 25)
+                delete_btn.setToolTip("Удалить алгоритм")
+                delete_btn.clicked.connect(lambda checked, a=algo: self.delete_algorithm(a))
+                actions_layout.addWidget(delete_btn)
+            
+            self.all_algorithms_table.setCellWidget(row, 4, actions_widget)
+        
         self.all_algorithms_table.resizeRowsToContents()
-    
+        
     def update_my_algorithms_table(self, algorithms):
         """Обновление таблицы моих алгоритмов"""
+        if not isinstance(algorithms, list):
+            algorithms = []
+            
         self.my_algorithms_table.setRowCount(len(algorithms))
         
         for row, algo in enumerate(algorithms):
-            # ID
-            self.my_algorithms_table.setItem(row, 0, QTableWidgetItem(str(algo.get('id', ''))))
-            
-            # Название
+            if not isinstance(algo, dict):
+                continue
+                
+            # Название (колонка 0)
             name_item = QTableWidgetItem(algo.get('name', ''))
-            self.my_algorithms_table.setItem(row, 1, name_item)
+            self.my_algorithms_table.setItem(row, 0, name_item)
             
-            # Статус
+            # Статус (колонка 1)
             status = algo.get('status_display', '')
+            if not status:
+                status = algo.get('status', '')
             status_item = QTableWidgetItem(status)
             
             if algo.get('status') == 'approved':
@@ -413,114 +417,121 @@ class MainWindow(QMainWindow):
             else:
                 status_item.setBackground(QColor(config.COLOR_PENDING))
             
-            self.my_algorithms_table.setItem(row, 2, status_item)
+            self.my_algorithms_table.setItem(row, 1, status_item)
             
-            # Модератор
-            moderator = algo.get('moderated_by', {})
-            moderator_name = moderator.get('username', '') if isinstance(moderator, dict) else str(moderator)
-            self.my_algorithms_table.setItem(row, 3, QTableWidgetItem(moderator_name))
+            # Дата создания (колонка 2)
+            created = algo.get('created_at', '')
+            if created and len(created) >= 10:
+                created = created[:10]  # Берем только дату
+            self.my_algorithms_table.setItem(row, 2, QTableWidgetItem(created))
             
-            # Дата создания
-            created = algo.get('created_at', '')[:19]  # Берем дату и время
-            self.my_algorithms_table.setItem(row, 4, QTableWidgetItem(created))
+            # Дата обновления (колонка 3)
+            updated = algo.get('updated_at', '')
+            if updated and len(updated) >= 10:
+                updated = updated[:10]
+            self.my_algorithms_table.setItem(row, 3, QTableWidgetItem(updated))
             
-            # Дата обновления
-            updated = algo.get('updated_at', '')[:19]
-            self.my_algorithms_table.setItem(row, 5, QTableWidgetItem(updated))
-            
-            # Действия
+            # Действия (колонка 4)
             actions_widget = QWidget()
             actions_layout = QHBoxLayout(actions_widget)
             actions_layout.setContentsMargins(5, 2, 5, 2)
+            actions_layout.setSpacing(3)
             
-            view_btn = QPushButton("👁")
-            view_btn.setFixedSize(30, 25)
+            # Кнопки действий текстом
+            view_btn = QPushButton("Просмотр")
+            view_btn.setFixedSize(80, 25)
             view_btn.clicked.connect(lambda checked, a=algo: self.view_algorithm(a))
             actions_layout.addWidget(view_btn)
             
-            edit_btn = QPushButton("✏️")
-            edit_btn.setFixedSize(30, 25)
+            edit_btn = QPushButton("Редакт.")
+            edit_btn.setFixedSize(70, 25)
             edit_btn.clicked.connect(lambda checked, a=algo: self.edit_algorithm(a))
             actions_layout.addWidget(edit_btn)
             
-            delete_btn = QPushButton("🗑")
-            delete_btn.setFixedSize(30, 25)
+            delete_btn = QPushButton("Удалить")
+            delete_btn.setFixedSize(70, 25)
             delete_btn.clicked.connect(lambda checked, a=algo: self.delete_algorithm(a))
             actions_layout.addWidget(delete_btn)
             
-            self.my_algorithms_table.setCellWidget(row, 6, actions_widget)
+            self.my_algorithms_table.setCellWidget(row, 4, actions_widget)
         
         self.my_algorithms_table.resizeRowsToContents()
-    
+        
     def update_moderation_table(self, algorithms):
         """Обновление таблицы модерации"""
+        if not isinstance(algorithms, list):
+            algorithms = []
+            
         self.moderation_table.setRowCount(len(algorithms))
         
         for row, algo in enumerate(algorithms):
-            # ID
-            self.moderation_table.setItem(row, 0, QTableWidgetItem(str(algo.get('id', ''))))
+            if not isinstance(algo, dict):
+                continue
+                
+            # Название (колонка 0)
+            self.moderation_table.setItem(row, 0, QTableWidgetItem(algo.get('name', '')))
             
-            # Название
-            self.moderation_table.setItem(row, 1, QTableWidgetItem(algo.get('name', '')))
+            # Автор (колонка 1)
+            self.moderation_table.setItem(row, 1, QTableWidgetItem(algo.get('author_name', '')))
             
-            # Автор
-            self.moderation_table.setItem(row, 2, QTableWidgetItem(algo.get('author_name', '')))
+            # Теги (колонка 2)
+            tags_list = algo.get('tags_list', [])
+            if isinstance(tags_list, list):
+                tags = ", ".join(tags_list)
+            else:
+                tags = str(tags_list)
+            self.moderation_table.setItem(row, 2, QTableWidgetItem(tags))
             
-            # Теги
-            tags = ", ".join(algo.get('tags_list', []))
-            self.moderation_table.setItem(row, 3, QTableWidgetItem(tags))
+            # Дата создания (колонка 3)
+            created = algo.get('created_at', '')
+            if created and len(created) >= 10:
+                created = created[:10]
+            self.moderation_table.setItem(row, 3, QTableWidgetItem(created))
             
-            # Дата создания
-            created = algo.get('created_at', '')[:19]
-            self.moderation_table.setItem(row, 4, QTableWidgetItem(created))
-            
-            # Статус
-            status = algo.get('status_display', '')
-            status_item = QTableWidgetItem(status)
-            status_item.setBackground(QColor(config.COLOR_PENDING))
-            self.moderation_table.setItem(row, 5, status_item)
-            
-            # Действия модерации
+            # Действия модерации (колонка 4)
             actions_widget = QWidget()
             actions_layout = QHBoxLayout(actions_widget)
             actions_layout.setContentsMargins(5, 2, 5, 2)
+            actions_layout.setSpacing(3)
             
-            view_btn = QPushButton("👁")
-            view_btn.setFixedSize(30, 25)
+            # Кнопка просмотра
+            view_btn = QPushButton("Просмотр")
+            view_btn.setFixedSize(80, 25)
             view_btn.clicked.connect(lambda checked, a=algo: self.view_algorithm(a))
             actions_layout.addWidget(view_btn)
             
-            approve_btn = QPushButton("✅")
-            approve_btn.setFixedSize(30, 25)
-            approve_btn.setToolTip("Одобрить")
+            # Кнопка одобрения
+            approve_btn = QPushButton("Одобрить")
+            approve_btn.setFixedSize(80, 25)
+            approve_btn.setToolTip("Одобрить алгоритм")
             approve_btn.clicked.connect(lambda checked, a=algo: self.moderate_algorithm(a, 'approved'))
             actions_layout.addWidget(approve_btn)
             
-            reject_btn = QPushButton("❌")
-            reject_btn.setFixedSize(30, 25)
-            reject_btn.setToolTip("Отклонить")
+            # Кнопка отклонения
+            reject_btn = QPushButton("Отклонить")
+            reject_btn.setFixedSize(80, 25)
+            reject_btn.setToolTip("Отклонить алгоритм")
             reject_btn.clicked.connect(lambda checked, a=algo: self.show_reject_dialog(a))
             actions_layout.addWidget(reject_btn)
             
-            self.moderation_table.setCellWidget(row, 6, actions_widget)
+            self.moderation_table.setCellWidget(row, 4, actions_widget)
         
         self.moderation_table.resizeRowsToContents()
-    
+        
     def on_search_changed(self, text):
         """Обработка изменения текста поиска"""
-        # Используем таймер для отложенного поиска
         if hasattr(self, 'search_timer'):
             self.search_timer.stop()
         
         self.search_timer = QTimer()
         self.search_timer.setSingleShot(True)
         self.search_timer.timeout.connect(self.search_algorithms)
-        self.search_timer.start(500)  # 500ms задержка
-    
+        self.search_timer.start(500)
+        
     def search_algorithms(self):
         """Выполнение поиска"""
         self.load_algorithms()
-    
+        
     def create_algorithm(self):
         """Создание нового алгоритма"""
         if not self.current_user:
@@ -531,11 +542,21 @@ class MainWindow(QMainWindow):
         if dialog.exec_() == QDialog.Accepted:
             self.load_algorithms()
             self.load_my_algorithms()
-    
+            
     def edit_algorithm(self, algorithm):
         """Редактирование алгоритма"""
         if not self.current_user:
             self.show_error("Сначала войдите в систему")
+            return
+        
+        # Проверяем права на редактирование
+        current_username = self.current_user.get('username')
+        author_name = algorithm.get('author_name', '')
+        is_moderator = self.current_user.get('is_staff', False)
+        
+        # Редактировать можно только свои алгоритмы или если модератор
+        if current_username != author_name and not is_moderator:
+            self.show_error("Вы можете редактировать только свои алгоритмы")
             return
         
         # Загружаем полные данные алгоритма
@@ -548,7 +569,7 @@ class MainWindow(QMainWindow):
         if dialog.exec_() == QDialog.Accepted:
             self.load_algorithms()
             self.load_my_algorithms()
-    
+            
     def view_algorithm(self, algorithm):
         """Просмотр алгоритма"""
         # Загружаем полные данные
@@ -628,40 +649,6 @@ class MainWindow(QMainWindow):
         font.setStyleHint(QFont.Monospace)
         code_text.setFont(font)
         
-        # Добавляем подсветку синтаксиса (простая версия)
-        from PyQt5.QtGui import QSyntaxHighlighter, QTextCharFormat, QColor
-        class PythonHighlighter(QSyntaxHighlighter):
-            def __init__(self, parent):
-                super().__init__(parent)
-                self.highlighting_rules = []
-                
-                # Ключевые слова Python
-                keyword_format = QTextCharFormat()
-                keyword_format.setForeground(QColor("#0000FF"))
-                keyword_format.setFontWeight(QFont.Bold)
-                keywords = [
-                    "def", "class", "return", "if", "elif", "else", "for", "while",
-                    "try", "except", "import", "from", "as", "with", "pass", "break",
-                    "continue", "True", "False", "None", "and", "or", "not", "in", "is"
-                ]
-                for word in keywords:
-                    pattern = r'\b' + word + r'\b'
-                    self.highlighting_rules.append((QRegExp(pattern), keyword_format))
-                
-                # Комментарии
-                comment_format = QTextCharFormat()
-                comment_format.setForeground(QColor("#008000"))
-                self.highlighting_rules.append((QRegExp(r'#.*'), comment_format))
-                
-                # Строки
-                string_format = QTextCharFormat()
-                string_format.setForeground(QColor("#800000"))
-                self.highlighting_rules.append((QRegExp(r'\".*\"'), string_format))
-                self.highlighting_rules.append((QRegExp(r'\'.*\''), string_format))
-        
-        # Применяем подсветку
-        highlighter = PythonHighlighter(code_text.document())
-        
         code_layout.addWidget(code_text)
         tabs.addTab(code_tab, "Код")
         
@@ -673,11 +660,21 @@ class MainWindow(QMainWindow):
         layout.addWidget(close_btn)
         
         dialog.exec_()
-    
+        
     def delete_algorithm(self, algorithm):
         """Удаление алгоритма"""
         if not self.current_user:
             self.show_error("Сначала войдите в систему")
+            return
+        
+        # Проверяем права на удаление
+        current_username = self.current_user.get('username')
+        author_name = algorithm.get('author_name', '')
+        is_moderator = self.current_user.get('is_staff', False)
+        
+        # Удалять можно только свои алгоритмы или если модератор
+        if current_username != author_name and not is_moderator:
+            self.show_error("Вы можете удалять только свои алгоритмы")
             return
         
         reply = QMessageBox.question(
@@ -693,7 +690,7 @@ class MainWindow(QMainWindow):
                 self.load_my_algorithms()
             else:
                 self.show_error("Не удалось удалить алгоритм")
-    
+                
     def moderate_algorithm(self, algorithm, status):
         """Модерация алгоритма"""
         if not self.current_user or not self.current_user.get('is_staff'):
@@ -715,7 +712,7 @@ class MainWindow(QMainWindow):
                     self.load_my_algorithms()
                 else:
                     self.show_error("Не удалось одобрить алгоритм")
-    
+                    
     def show_reject_dialog(self, algorithm):
         """Диалог отклонения алгоритма"""
         dialog = QDialog(self)
@@ -750,7 +747,7 @@ class MainWindow(QMainWindow):
         layout.addLayout(button_layout)
         
         dialog.exec_()
-    
+        
     def process_rejection(self, dialog, algorithm):
         """Обработка отклонения"""
         reason = self.reject_reason_input.toPlainText().strip()
@@ -767,7 +764,7 @@ class MainWindow(QMainWindow):
             self.load_my_algorithms()
         else:
             self.show_error("Не удалось отклонить алгоритм")
-    
+            
     def logout(self):
         """Выход из системы"""
         self.api.clear_token()
@@ -783,7 +780,7 @@ class MainWindow(QMainWindow):
         
         # Показываем диалог входа
         self.show_login_dialog()
-    
+        
     def auto_refresh(self):
         """Автообновление данных"""
         if self.current_user:
@@ -794,15 +791,15 @@ class MainWindow(QMainWindow):
                 self.load_my_algorithms()
             elif current_tab == 2:  # Модерация
                 self.load_moderation_list()
-    
+                
     def show_error(self, message: str):
         """Показать сообщение об ошибке"""
         QMessageBox.critical(self, "Ошибка", message)
-    
+        
     def show_success(self, message: str):
         """Показать сообщение об успехе"""
         QMessageBox.information(self, "Успех", message)
-    
+        
     def closeEvent(self, event):
         """Обработка закрытия окна"""
         self.timer.stop()
