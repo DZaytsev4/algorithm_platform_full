@@ -1,0 +1,23 @@
+# Виртуальные окружения Python
+.venv/
+venv/
+env/
+ENV/
+.virtualenv/
+
+# Кэш и артефакты Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# IDE и ОС
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
