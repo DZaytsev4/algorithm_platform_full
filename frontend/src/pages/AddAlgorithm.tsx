@@ -4,8 +4,10 @@ import { cpp } from '@codemirror/lang-cpp';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { apiService } from '../service/api';
 import { Algorithm } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 
 const AddAlgorithm: React.FC = () => {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -15,7 +17,6 @@ const AddAlgorithm: React.FC = () => {
     price: '100',
     language: 'C++',
     compiler: 'g++',
-    author: '' // Добавляем поле автора
   });
 
   const [showPrice, setShowPrice] = useState(false);
@@ -25,6 +26,10 @@ const AddAlgorithm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user?.username) {
+      setError('Войдите в аккаунт, чтобы добавить алгоритм.');
+      return;
+    }
     setLoading(true);
     setError(null);
     setSuccess(false);
@@ -43,7 +48,7 @@ const AddAlgorithm: React.FC = () => {
         price: formData.isPaid ? Number(formData.price) : undefined,
         language: formData.language,
         compiler: formData.compiler,
-        author: formData.author || 'Анонимный автор' // Если автор не указан
+        author: user.username,
       };
 
       console.log('Отправка данных:', algorithmData);
@@ -64,7 +69,6 @@ const AddAlgorithm: React.FC = () => {
         price: '100',
         language: 'C++',
         compiler: 'g++',
-        author: ''
       });
       setShowPrice(false);
 
@@ -124,19 +128,6 @@ const AddAlgorithm: React.FC = () => {
       )}
 
       <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="author">Автор</label>
-          <input
-            type="text"
-            id="author"
-            name="author"
-            value={formData.author}
-            onChange={handleChange}
-            placeholder="Ваше имя или псевдоним"
-            required
-          />
-        </div>
-
         <div className="form-group">
           <label htmlFor="title">Название алгоритма</label>
           <input

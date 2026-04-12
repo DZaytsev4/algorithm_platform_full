@@ -341,7 +341,7 @@ class ApiService {
     return {
       name: algorithm.title,
       description: algorithm.description,
-      author_name: algorithm.author,
+      ...(algorithm.author ? { author_name: algorithm.author } : {}),
       tegs: algorithm.tags ? algorithm.tags.join(', ') : '',
       is_paid: algorithm.isPaid,
       price: algorithm.price,
