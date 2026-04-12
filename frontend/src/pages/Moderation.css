@@ -1,9 +1,12 @@
 /* Moderation.css */
 .moderation-page {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem 1.5rem;
-  min-height: 100vh;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 2rem clamp(1rem, 4vw, 3rem);
+  box-sizing: border-box;
+  min-height: calc(100vh - 80px);
+  flex: 1;
 }
 
 .moderation-header {
@@ -574,7 +577,7 @@
 /* Responsive Design */
 @media (max-width: 768px) {
   .moderation-page {
-    padding: 1rem;
+    padding: 1rem clamp(0.75rem, 3vw, 1.25rem);
   }
   
   .moderation-title {

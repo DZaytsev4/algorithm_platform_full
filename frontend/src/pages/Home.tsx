@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { apiService } from "../service/api";
 import { ModeratedAlgorithm } from "../types";
 import './Home.css';
+import SiteFooter from '../components/SiteFooter';
 
 const Home: React.FC = () => {
   const [algorithms, setAlgorithms] = useState<ModeratedAlgorithm[]>([]);
@@ -76,6 +77,7 @@ const Home: React.FC = () => {
           <div className="loading-spinner"></div>
           <div className="loading-text">Загрузка алгоритмов...</div>
         </div>
+        <SiteFooter />
       </div>
     );
   }
@@ -119,12 +121,6 @@ const Home: React.FC = () => {
             </div>
           </div>
         )}
-
-        {/* Уведомление о том, что показываются только проверенные алгоритмы */}
-        <div className="approved-notice">
-          <span className="approved-badge">✓</span>
-          Показываются только проверенные и одобренные алгоритмы
-        </div>
 
         <section className="filters-section">
           <div className="filters-container">
@@ -193,6 +189,7 @@ const Home: React.FC = () => {
           )}
         </section>
       </main>
+      <SiteFooter />
     </div>
   );
 };

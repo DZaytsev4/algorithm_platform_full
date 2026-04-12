@@ -5,12 +5,56 @@
   box-sizing: border-box;
 }
 
+html {
+  background-color: #f5f5f5;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   line-height: 1.6;
   color: #333;
   background-color: #f5f5f5;
   min-height: 100vh;
+  min-height: 100dvh;
+}
+
+#root {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Колонка на весь экран: навбар + область маршрута без щели снизу */
+.app-shell {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.app-main {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Прямой потомок (в т.ч. обёртка AnimatePresence) тянется на всю высоту main */
+.app-main > * {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+}
+
+.route-outlet {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
 }
 
 /* ===== НАВИГАЦИЯ ===== */
@@ -303,12 +347,53 @@ body {
 }
 
 /* ===== ФОРМЫ ===== */
-.add-algorithm-page,
-.profile-page {
-  padding: 2rem;
-  max-width: 800px;
-  margin: 0 auto;
+.add-algorithm-page {
+  padding: 2rem clamp(1rem, 4vw, 3rem);
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  box-sizing: border-box;
   min-height: calc(100vh - 80px);
+}
+
+/* Редактор кода — половина ширины, блок по центру страницы; текст как в IDE (влево) */
+.add-algorithm-page .add-algorithm-code-wrap {
+  width: 50%;
+  max-width: 100%;
+  min-width: 0;
+  margin-inline: auto;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+.add-algorithm-page .add-algorithm-code-wrap .code-editor-container {
+  width: 100%;
+  text-align: left;
+}
+
+/* CodeMirror: выравнивание строк как в IDE */
+.add-algorithm-page .add-algorithm-code-wrap .cm-content {
+  text-align: left;
+}
+
+.add-algorithm-page .add-algorithm-code-wrap .cm-editor {
+  direction: ltr;
+}
+
+@media (max-width: 1024px) {
+  .add-algorithm-page .add-algorithm-code-wrap {
+    width: 100%;
+  }
+}
+
+.profile-page {
+  padding: 2rem clamp(1rem, 4vw, 3rem);
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  box-sizing: border-box;
+  min-height: calc(100vh - 80px);
+  flex: 1;
 }
 
 .form-group {
@@ -635,9 +720,12 @@ body {
     grid-template-columns: 1fr;
   }
   
-  .add-algorithm-page,
+  .add-algorithm-page {
+    padding: 1rem clamp(0.75rem, 3vw, 1.25rem);
+  }
+
   .profile-page {
-    padding: 1rem;
+    padding: 1rem clamp(0.75rem, 3vw, 1.25rem);
   }
   
   .card-header {

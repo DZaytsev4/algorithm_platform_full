@@ -16,7 +16,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   const { user, loading } = useAuth();
   
   if (loading) {
-    return <div className="loading">Загрузка...</div>;
+    return <div className="loading route-outlet">Загрузка...</div>;
   }
   
   return user ? <>{children}</> : <Navigate to="/login" />;
@@ -137,7 +137,7 @@ function AppContent() {
   };
 
   return (
-    <>
+    <div className="app-shell">
       <nav className="navbar">
         <div className="nav-brand">
           <Link to="/">AlgoPlatform</Link>
@@ -254,10 +254,12 @@ function AppContent() {
         </div>
       </nav>
 
+      <main className="app-main">
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
           <Route path="/" element={
             <motion.div
+              className="route-outlet"
               key="home"
               initial="initial"
               animate="in"
@@ -272,6 +274,7 @@ function AppContent() {
           <Route path="/add-algorithm" element={
             <ProtectedRoute>
               <motion.div
+                className="route-outlet"
                 key="add-algorithm"
                 initial="initial"
                 animate="in"
@@ -286,6 +289,7 @@ function AppContent() {
           <Route path="/edit-algorithm/:id" element={
             <ProtectedRoute>
               <motion.div
+                className="route-outlet"
                 key="edit-algorithm"
                 initial="initial"
                 animate="in"
@@ -300,6 +304,7 @@ function AppContent() {
           <Route path="/profile" element={
             <ProtectedRoute>
               <motion.div
+                className="route-outlet"
                 key="profile"
                 initial="initial"
                 animate="in"
@@ -314,6 +319,7 @@ function AppContent() {
           <Route path="/moderation" element={
             <ProtectedRoute>
               <motion.div
+                className="route-outlet"
                 key="moderation"
                 initial="initial"
                 animate="in"
@@ -328,6 +334,7 @@ function AppContent() {
           {/* Публичные маршруты */}
           <Route path="/login" element={
             <motion.div
+              className="route-outlet"
               key="login"
               initial="initial"
               animate="in"
@@ -340,6 +347,7 @@ function AppContent() {
           
           <Route path="/register" element={
             <motion.div
+              className="route-outlet"
               key="register"
               initial="initial"
               animate="in"
@@ -352,6 +360,7 @@ function AppContent() {
           
           <Route path="/algorithm/:id" element={
             <motion.div
+              className="route-outlet"
               key="algorithm-details"
               initial="initial"
               animate="in"
@@ -363,8 +372,9 @@ function AppContent() {
           } />
         </Routes>
       </AnimatePresence>
+      </main>
       <ToastHost />
-    </>
+    </div>
   );
 }
 

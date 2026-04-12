@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../service/api';
 import { ModeratedAlgorithm, AlgorithmPurchaseItem } from '../types';
 import { Link, useLocation } from 'react-router-dom';
+import './Home.css';
 import './Profile.css';
 
 function isRealisticEmail(email: string): boolean {
@@ -352,7 +353,7 @@ const Profile: React.FC = () => {
         )}
 
         {activeTab === 'my-algorithms' && (
-        <div className="algorithms-section">
+        <div className="algorithms-section profile-my-algorithms">
           <h2>Мои алгоритмы ({userAlgorithms.length})</h2>
           
           {algorithmsLoading ? (
@@ -362,31 +363,62 @@ const Profile: React.FC = () => {
               У вас пока нет созданных алгоритмов
             </div>
           ) : (
-            <div className="algorithms-list">
+            <div className="algorithms-grid">
               {userAlgorithms.map((algorithm) => (
                 <div
                   key={algorithm.id}
-                  className={`algorithm-card ${algorithm.status === 'rejected' ? 'algorithm-card--rejected' : ''}`}
+                  className={[
+                    'algorithm-card',
+                    algorithm.isPaid ? 'paid' : 'free',
+                    algorithm.status === 'pending' ? 'profile-algo-card--pending' : '',
+                    algorithm.status === 'rejected' ? 'profile-algo-card--rejected' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
                 >
-                  <h3>{algorithm.title}</h3>
-                  <p>{algorithm.description}</p>
-                  <div className="algorithm-meta" role="list">
-                    <span
-                      role="listitem"
-                      className={`mod-status mod-status--${algorithm.status}`}
-                    >
-                      {moderationStatusLabel[algorithm.status] ?? algorithm.status}
-                    </span>
-                    <span
-                      role="listitem"
-                      className={`price-type ${algorithm.isPaid ? 'paid' : 'free'}`}
-                    >
-                      {algorithm.isPaid ? 'Платный' : 'Бесплатный'}
-                    </span>
-                    <span role="listitem" className="language">
-                      {algorithm.language}
-                    </span>
+                  <div className="card-header">
+                    <div className="card-title-section">
+                      <h3 className="card-title">{algorithm.title}</h3>
+                      <div className="card-meta">
+                        <span className="card-date">
+                          {new Date(algorithm.createdAt).toLocaleDateString('ru-RU')}
+                        </span>
+                        <span className={`mod-status mod-status--${algorithm.status}`}>
+                          {moderationStatusLabel[algorithm.status] ?? algorithm.status}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="card-badges">
+                      <span className="language-badge">{algorithm.language}</span>
+                      <span className={`type-badge ${algorithm.isPaid ? 'paid' : 'free'}`}>
+                        {algorithm.isPaid
+                          ? algorithm.price != null
+                            ? `${algorithm.price} руб.`
+                            : 'Платный'
+                          : 'Бесплатный'}
+                      </span>
+                    </div>
                   </div>
+
+                  <p className="card-description">{algorithm.description}</p>
+
+                  <div className="card-details">
+                    <div className="detail-item">
+                      <span className="detail-label">⚙️ Компилятор</span>
+                      <span className="detail-value">{algorithm.compiler}</span>
+                    </div>
+                  </div>
+
+                  {algorithm.tags.length > 0 && (
+                    <div className="card-tags">
+                      {algorithm.tags.map((tag) => (
+                        <span key={tag} className="tag">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
                   {algorithm.status === 'rejected' && (
                     <div className="rejection-notice" role="status">
                       <span className="rejection-notice__label">Почему отклонён</span>
@@ -397,12 +429,21 @@ const Profile: React.FC = () => {
                       </p>
                     </div>
                   )}
-                  <div className="algorithm-card-actions">
-                    <Link to={`/algorithm/${algorithm.id}`} className="algo-action-link">
-                      Открыть
+
+                  <div className="card-actions profile-algo-card-actions">
+                    <Link
+                      to={`/algorithm/${algorithm.id}`}
+                      className="details-btn details-btn--outline"
+                    >
+                      <span>Открыть</span>
+                      <span className="btn-arrow">→</span>
                     </Link>
-                    <Link to={`/edit-algorithm/${algorithm.id}`} className="algo-action-link algo-action-link--primary">
-                      Изменить
+                    <Link
+                      to={`/edit-algorithm/${algorithm.id}`}
+                      className="details-btn"
+                    >
+                      <span>Изменить</span>
+                      <span className="btn-arrow">→</span>
                     </Link>
                   </div>
                 </div>
