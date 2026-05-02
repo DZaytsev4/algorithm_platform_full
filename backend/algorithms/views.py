@@ -6,14 +6,14 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from .models import Algorithm, AlgorithmPurchase, AlgorithmPricePoint
 from .serializers import AlgorithmSerializer
+from users.services.roles import is_moderator
 
 class IsModerator(permissions.BasePermission):
     """
-    Разрешение: только модераторы (staff или в группе 'Модераторы').
+    Разрешение: только модераторы (staff/superuser или в группе модераторов).
     """
     def has_permission(self, request, view):
-        user = request.user
-        return bool(user and user.is_authenticated and (user.is_staff or user.groups.filter(name='Модераторы').exists()))
+        return bool(is_moderator(getattr(request, "user", None)))
 
 class AlgorithmList(generics.ListCreateAPIView):
     """
@@ -31,7 +31,7 @@ class AlgorithmList(generics.ListCreateAPIView):
         if not user.is_authenticated:
             queryset = queryset.filter(status=Algorithm.STATUS_APPROVED)
         else:
-            if not (user.is_staff or user.groups.filter(name='Модераторы').exists()):
+            if not is_moderator(user):
                 queryset = queryset.filter(
                     Q(status=Algorithm.STATUS_APPROVED) | Q(author_name=user.username)
                 )
@@ -65,7 +65,7 @@ class AlgorithmDetail(generics.RetrieveUpdateDestroyAPIView):
         if not user.is_authenticated:
             queryset = queryset.filter(status=Algorithm.STATUS_APPROVED)
         else:
-            if not (user.is_staff or user.groups.filter(name='Модераторы').exists()):
+            if not is_moderator(user):
                 queryset = queryset.filter(Q(status=Algorithm.STATUS_APPROVED) | Q(author_name=user.username))
         return queryset
 

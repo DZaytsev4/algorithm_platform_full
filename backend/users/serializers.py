@@ -4,14 +4,35 @@ from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
 
 from algorithms.models import Algorithm
+from users.services.roles import get_role, get_user_group_names
 
 User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
+    role = serializers.SerializerMethodField()
+    groups = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'date_joined', 'is_staff']
+        fields = [
+            'id',
+            'username',
+            'email',
+            'first_name',
+            'last_name',
+            'date_joined',
+            'is_staff',
+            'is_superuser',
+            'groups',
+            'role',
+        ]
+
+    def get_groups(self, obj):
+        return get_user_group_names(obj)
+
+    def get_role(self, obj):
+        return get_role(obj)
 
 
 class UserProfileUpdateSerializer(serializers.ModelSerializer):

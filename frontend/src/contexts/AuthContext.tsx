@@ -38,31 +38,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     if (token) {
       try {
-        console.log('Checking auth with token...');
         const userData = await apiService.getCurrentUser();
         setUser(userData);
-        console.log('User authenticated:', userData.username);
       } catch (error) {
         console.error('Auth check failed:', error);
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         setUser(null);
       }
-    } else {
-      console.log('No token found');
     }
     setLoading(false);
   };
 
   const login = (userData: User, tokens: { access: string; refresh: string }) => {
-    console.log('AuthContext login called');
     setUser(userData);
     localStorage.setItem('accessToken', tokens.access);
     localStorage.setItem('refreshToken', tokens.refresh);
   };
 
   const logout = () => {
-    console.log('AuthContext logout called');
     setUser(null);
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
@@ -70,32 +64,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const register = async (registerData: RegisterData & { password2: string }) => {
     try {
-      console.log('1. Registering user...');
-      
       // Регистрируем пользователя (не возвращает данных)
       await apiService.register(registerData);
-      
-      console.log('2. Registration successful, auto-login...');
-      
+
       // Автоматически логинимся после регистрации
       const tokens = await apiService.login({
         username: registerData.username,
         password: registerData.password,
       });
-      
-      console.log('3. Login tokens received');
-      
+
       localStorage.setItem('accessToken', tokens.access);
       localStorage.setItem('refreshToken', tokens.refresh);
       
       // Даем время для сохранения токена
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      console.log('4. Getting user data...');
       const userData = await apiService.getCurrentUser();
-      
-      console.log('5. User data received:', userData);
-      
+
       // Обновляем контекст
       login(userData, tokens);
       
