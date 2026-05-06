@@ -7,6 +7,7 @@ from django.utils import timezone
 from .models import Algorithm
 from .serializers import AlgorithmSerializer
 from .views import IsModerator
+from unittest.mock import patch
 
 # ========== МОДУЛЬНЫЕ ТЕСТЫ ==========
 
@@ -636,6 +637,92 @@ class AlgorithmViewsTests(TestCase):
         # Проверяем, что алгоритм НЕ удален из БД
         self.assertTrue(Algorithm.objects.filter(id=algorithm_id).exists())
 
+    def test_run_algorithm_requires_code_visible(self):
+        """Запуск возможен только когда код доступен (например, платный без покупки — скрыт)."""
+        client = APIClient()
+        author = User.objects.create_user(username='author_run', password='pass12345')
+        other = User.objects.create_user(username='other_run', password='pass12345')
+
+        algo = Algorithm.objects.create(
+            name='AlgoRun',
+            description='desc',
+            code='int main(){return 0;}',
+            author_name=author.username,
+            language='C++',
+            compiler='g++',
+            status=Algorithm.STATUS_APPROVED,
+            is_paid=True,
+            price=200,
+        )
+
+        url = reverse('algorithm_run', kwargs={'pk': algo.pk})
+        client.force_authenticate(user=other)
+        resp = client.post(url, data={'stdin': ''}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_run_algorithm_unknown_language_returns_compiled_false(self):
+        client = APIClient()
+        user = User.objects.create_user(username='author_run2', password='pass12345')
+        algo = Algorithm.objects.create(
+            name='AlgoRun2',
+            description='desc',
+            code='+++',
+            author_name=user.username,
+            language='Brainfuck',
+            compiler='bf',
+            status=Algorithm.STATUS_PENDING,
+        )
+
+        url = reverse('algorithm_run', kwargs={'pk': algo.pk})
+        client.force_authenticate(user=user)
+        resp = client.post(url, data={'stdin': ''}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertFalse(resp.data.get('compiled'))
+
+    @patch('algorithms.views.run_code')
+    def test_run_algorithm_happy_path_mocked(self, mock_run):
+        client = APIClient()
+        user = User.objects.create_user(username='author_run3', password='pass12345')
+        algo = Algorithm.objects.create(
+            name='AlgoRun3',
+            description='desc',
+            code='int main(){return 0;}',
+            author_name=user.username,
+            language='C++',
+            compiler='g++',
+            status=Algorithm.STATUS_PENDING,
+        )
+
+        compile_res = type(
+            "C",
+            (),
+            {
+                "compiled": True,
+                "stdout": "",
+                "stderr": "",
+                "exit_code": 0,
+                "command": ["g++", "main.cpp"],
+            },
+        )()
+        run_res = type(
+            "R",
+            (),
+            {
+                "ran": True,
+                "stdout": "ok\n",
+                "stderr": "",
+                "exit_code": 0,
+                "command": ["./main"],
+            },
+        )()
+        mock_run.return_value = (compile_res, run_res)
+
+        url = reverse('algorithm_run', kwargs={'pk': algo.pk})
+        client.force_authenticate(user=user)
+        resp = client.post(url, data={'code': algo.code, 'stdin': '1 2\n'}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertTrue(resp.data['compiled'])
+        self.assertTrue(resp.data['ran'])
     def test_moderation_list_access_for_moderator(self):
         """Тест доступа к списку модерации для модератора"""
         self.client.force_authenticate(user=self.moderator)

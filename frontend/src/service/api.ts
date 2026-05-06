@@ -24,6 +24,15 @@ export interface ApiAlgorithm {
   code_visible?: boolean;
 }
 
+export interface RunResponse {
+  compiled: boolean;
+  ran: boolean;
+  stdout?: string;
+  stderr?: string;
+  compile_exit_code?: number | null;
+  run_exit_code?: number | null;
+}
+
 class ApiService {
   constructor() {
     // Привязываем контекст методов
@@ -238,6 +247,33 @@ class ApiService {
       body: JSON.stringify({}),
     });
     return this.transformModeratedAlgorithm(algorithm);
+  }
+
+  async runAlgorithm(
+    id: string,
+    payload: {
+      code?: string;
+      language?: string;
+      compiler?: string;
+      stdin?: string;
+    } = {}
+  ): Promise<RunResponse> {
+    return await this.request<RunResponse>(`/algorithms/${id}/run/`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async runSnippet(payload: {
+    code: string;
+    language: string;
+    compiler?: string;
+    stdin?: string;
+  }): Promise<RunResponse> {
+    return await this.request<RunResponse>(`/algorithms/run/`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
   }
 
   async getMyPurchases(): Promise<AlgorithmPurchaseItem[]> {

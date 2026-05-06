@@ -30,6 +30,15 @@ const AddAlgorithm: React.FC = () => {
   const [loadExisting, setLoadExisting] = useState(isEditMode);
   const [initialLoadError, setInitialLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [stdinValue, setStdinValue] = useState('');
+  const [runLoading, setRunLoading] = useState(false);
+  const [runError, setRunError] = useState<string | null>(null);
+  const [runResult, setRunResult] = useState<{
+    compiled: boolean;
+    ran: boolean;
+    stdout?: string;
+    stderr?: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!isEditMode || !editId || !user?.username) return;
@@ -152,6 +161,41 @@ const AddAlgorithm: React.FC = () => {
       ...prev,
       code: value
     }));
+  };
+
+  const handleRun = async () => {
+    setRunLoading(true);
+    setRunError(null);
+    setRunResult(null);
+    try {
+      const res =
+        isEditMode && editId
+          ? await apiService.runAlgorithm(editId, {
+              code: formData.code,
+              language: formData.language,
+              compiler: formData.compiler,
+              stdin: stdinValue,
+            })
+          : await apiService.runSnippet({
+              code: formData.code,
+              language: formData.language,
+              compiler: formData.compiler,
+              stdin: stdinValue,
+            });
+
+      const compiled = Boolean(res.compiled);
+      const ran = Boolean(res.ran);
+      setRunResult({
+        compiled,
+        ran,
+        stdout: res.stdout ?? '',
+        stderr: res.stderr ?? '',
+      });
+    } catch (err) {
+      setRunError(err instanceof Error ? err.message : 'Не удалось запустить алгоритм');
+    } finally {
+      setRunLoading(false);
+    }
   };
 
   const togglePaid = () => {
@@ -296,6 +340,73 @@ const AddAlgorithm: React.FC = () => {
             />
           </div>
         </div>
+
+        <div className="form-group" style={{ marginTop: '-0.25rem' }}>
+            <button
+              type="button"
+              className="submit-btn"
+              onClick={handleRun}
+              disabled={runLoading || loading}
+              style={{
+                width: 'auto',
+                padding: '10px 14px',
+                marginBottom: '0.75rem',
+              }}
+            >
+              {runLoading ? 'Запуск…' : 'Запустить'}
+            </button>
+
+            <label htmlFor="stdin" style={{ display: 'block', marginBottom: 6 }}>
+              Ввод (stdin)
+            </label>
+            <textarea
+              id="stdin"
+              value={stdinValue}
+              onChange={(e) => setStdinValue(e.target.value)}
+              rows={4}
+              placeholder="То, что будет подано на stdin вашей программе"
+              style={{ width: '100%', marginBottom: 12 }}
+            />
+
+            {runError && (
+              <div className="error-message" style={{ marginTop: '0.5rem' }}>
+                <strong>Ошибка:</strong> {runError}
+              </div>
+            )}
+
+            {runResult && (
+              <div
+                style={{
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: 8,
+                  padding: 12,
+                  background: 'rgba(0,0,0,0.25)',
+                  marginTop: 12,
+                }}
+              >
+                <div style={{ marginBottom: 8 }}>
+                  <strong>Результат:</strong>{' '}
+                  <span style={{ color: runResult.compiled ? '#27ae60' : '#c0392b' }}>
+                    {runResult.compiled ? 'Выполнено' : 'Ошибка'}
+                  </span>
+                </div>
+
+                {runResult.stderr && runResult.stderr.trim() && (
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={{ fontWeight: 600, marginBottom: 6 }}>stderr</div>
+                    <pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{runResult.stderr}</pre>
+                  </div>
+                )}
+
+                {runResult.stdout && runResult.stdout.trim() && (
+                  <div>
+                    <div style={{ fontWeight: 600, marginBottom: 6 }}>stdout</div>
+                    <pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{runResult.stdout}</pre>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
         <div className="form-group">
           <label htmlFor="tags">Теги (через запятую)</label>
