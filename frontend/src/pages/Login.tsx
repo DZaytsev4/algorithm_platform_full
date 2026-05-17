@@ -25,24 +25,17 @@ const Login: React.FC = () => {
     setError('');
 
     try {
-      console.log('1. Getting tokens...');
       const tokens = await apiService.login(formData);
-      console.log('2. Tokens received:', tokens);
       
       localStorage.setItem('accessToken', tokens.access);
       localStorage.setItem('refreshToken', tokens.refresh);
-      console.log('3. Tokens saved to localStorage');
       
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      console.log('4. Getting user data...');
       const user = await apiService.getCurrentUser();
-      console.log('5. User data received:', user);
       
-      console.log('6. Updating auth context...');
       login(user, tokens);
       
-      console.log('7. Navigation to home');
       navigate('/');
       
     } catch (error) {

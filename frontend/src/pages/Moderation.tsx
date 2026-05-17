@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../service/api';
 import { ModeratedAlgorithm } from '../types';
 import { ALGORITHM_STATUS_DISPLAY, ALGORITHM_STATUS_COLORS } from '../utils/constants';
+import { hasModerationAccess, getUserRoleDisplay } from '../utils/authUtils';
 import './Moderation.css';
 
 const Moderation: React.FC = () => {
@@ -18,11 +19,6 @@ const Moderation: React.FC = () => {
   const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
   
   const { user } = useAuth();
-
-  useEffect(() => {
-    console.log('Current user in Moderation:', user);
-    console.log('Has moderation access:', hasModerationAccess());
-  }, [user]);
 
   useEffect(() => {
     fetchModerationAlgorithms();
@@ -115,82 +111,6 @@ const Moderation: React.FC = () => {
     return text.substr(0, maxLength) + '...';
   };
 
-  // Улучшенная проверка прав доступа
-  const hasModerationAccess = () => {
-    if (!user) return false;
-    
-    console.log('Checking moderation access for user:', user);
-    
-    // Проверяем различные возможные поля, которые могут указывать на права модератора/администратора
-    const userAny = user as any;
-    
-    // 1. Проверяем поле role
-    if (user.role === 'moderator' || user.role === 'admin') {
-      console.log('Access granted by role:', user.role);
-      return true;
-    }
-    
-    // 2. Проверяем Django-specific поля
-    if (userAny.is_staff || userAny.is_superuser) {
-      console.log('Access granted by Django fields - is_staff:', userAny.is_staff, 'is_superuser:', userAny.is_superuser);
-      return true;
-    }
-    
-    // 3. Проверяем группы пользователя
-    if (userAny.groups) {
-      let groups: string[] = [];
-      
-      // Обрабатываем разные форматы групп
-      if (Array.isArray(userAny.groups)) {
-        groups = userAny.groups.map((group: any) => 
-          typeof group === 'string' ? group.toLowerCase() : 
-          (group.name ? group.name.toLowerCase() : '')
-        );
-      }
-      
-      const moderatorGroups = [
-        'moderator', 'moderators', 'модератор', 'модераторы',
-        'admin', 'administrators', 'администратор', 'администраторы'
-      ];
-      
-      const hasModeratorGroup = groups.some((group: string) => 
-        moderatorGroups.includes(group)
-      );
-      
-      if (hasModeratorGroup) {
-        console.log('Access granted by groups:', groups);
-        return true;
-      }
-    }
-    
-    // 4. Временная заглушка для тестирования - разрешить доступ для определенных пользователей
-    const testModerators = ['admin', 'moderator', 'testmod', 'administrator'];
-    if (testModerators.includes(user.username.toLowerCase())) {
-      console.log('Access granted for test user:', user.username);
-      return true;
-    }
-    
-    console.log('Access DENIED for user:', user);
-    return false;
-  };
-
-  const getUserRoleDisplay = () => {
-    if (!user) return 'не авторизован';
-    
-    const userAny = user as any;
-    
-    if (user.role) return user.role;
-    if (userAny.is_superuser) return 'admin';
-    if (userAny.is_staff) return 'staff';
-    if (userAny.groups && userAny.groups.length > 0) {
-      const groups = Array.isArray(userAny.groups) 
-        ? userAny.groups.map((g: any) => typeof g === 'string' ? g : g.name)
-        : [];
-      return groups.join(', ');
-    }
-    
-    return 'consumer';
-  };
 
   // Проверяем права доступа
   if (!user) {
@@ -209,7 +129,7 @@ const Moderation: React.FC = () => {
     );
   }
 
-  if (!hasModerationAccess()) {
+  if (!hasModerationAccess(user)) {
     return (
       <div className="moderation-page">
         <div className="error-container">
@@ -222,7 +142,7 @@ const Moderation: React.FC = () => {
               <p><strong>Информация о вашем аккаунте:</strong></p>
               <ul>
                 <li>Имя пользователя: {user.username}</li>
-                <li>Определенная роль: {getUserRoleDisplay()}</li>
+                <li>Определенная роль: {getUserRoleDisplay(user)}</li>
                 <li>ID: {user.id}</li>
                 <li>Email: {user.email}</li>
               </ul>
@@ -248,7 +168,7 @@ const Moderation: React.FC = () => {
           Здесь вы можете просматривать и модерировать алгоритмы, отправленные пользователями.
         </p>
         <div className="user-info">
-          Вы вошли как: <strong>{user.username}</strong> (Роль: {getUserRoleDisplay()})
+          Вы вошли как: <strong>{user.username}</strong> (Роль: {getUserRoleDisplay(user)})
         </div>
       </div>
 

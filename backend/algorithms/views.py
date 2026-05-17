@@ -6,14 +6,19 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from .models import Algorithm, AlgorithmPurchase, AlgorithmPricePoint
 from .serializers import AlgorithmSerializer
+from .compile_service import run_code
+from users.services.roles import is_moderator
+
+MAX_REQUEST_CODE_CHARS = 50000
+MAX_REQUEST_STDIN_CHARS = 10000
+
 
 class IsModerator(permissions.BasePermission):
     """
-    Разрешение: только модераторы (staff или в группе 'Модераторы').
+    Разрешение: только модераторы (staff/superuser или в группе модераторов).
     """
     def has_permission(self, request, view):
-        user = request.user
-        return bool(user and user.is_authenticated and (user.is_staff or user.groups.filter(name='Модераторы').exists()))
+        return bool(is_moderator(getattr(request, "user", None)))
 
 class AlgorithmList(generics.ListCreateAPIView):
     """
@@ -31,7 +36,7 @@ class AlgorithmList(generics.ListCreateAPIView):
         if not user.is_authenticated:
             queryset = queryset.filter(status=Algorithm.STATUS_APPROVED)
         else:
-            if not (user.is_staff or user.groups.filter(name='Модераторы').exists()):
+            if not is_moderator(user):
                 queryset = queryset.filter(
                     Q(status=Algorithm.STATUS_APPROVED) | Q(author_name=user.username)
                 )
@@ -65,7 +70,7 @@ class AlgorithmDetail(generics.RetrieveUpdateDestroyAPIView):
         if not user.is_authenticated:
             queryset = queryset.filter(status=Algorithm.STATUS_APPROVED)
         else:
-            if not (user.is_staff or user.groups.filter(name='Модераторы').exists()):
+            if not is_moderator(user):
                 queryset = queryset.filter(Q(status=Algorithm.STATUS_APPROVED) | Q(author_name=user.username))
         return queryset
 
@@ -164,3 +169,127 @@ def moderate_algorithm(request, algorithm_id):
 
     serializer = AlgorithmSerializer(algorithm, context={'request': request})
     return Response(serializer.data)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def run_algorithm(request, pk):
+    """
+    Запуск алгоритма.
+    Если язык компилируемый — компилирует перед запуском (прозрачно для клиента).
+    """
+    algorithm = get_object_or_404(Algorithm, pk=pk)
+    if not algorithm.can_view_code(request.user):
+        return Response({'detail': 'Код алгоритма недоступен.'}, status=status.HTTP_404_NOT_FOUND)
+
+    language = request.data.get('language') or algorithm.language or ''
+    code = request.data.get('code') if request.data.get('code') is not None else algorithm.code
+
+    stdin = request.data.get('stdin') or ""
+    if len(code or "") > MAX_REQUEST_CODE_CHARS:
+        return Response(
+            {'detail': f'Код слишком большой. Максимум {MAX_REQUEST_CODE_CHARS} символов.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    if len(stdin or "") > MAX_REQUEST_STDIN_CHARS:
+        return Response(
+            {'detail': f'Слишком большой stdin. Максимум {MAX_REQUEST_STDIN_CHARS} символов.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    compiler = request.data.get('compiler') or algorithm.compiler or None
+
+    # лимиты можно переопределять из запроса (для тестов/локальной отладки),
+    # но держим жёсткие “потолки”, чтобы не дать выкрутить на бесконечность.
+    def _clamp_int(val, default, lo, hi):
+        try:
+            n = int(val)
+        except Exception:
+            n = default
+        return max(lo, min(hi, n))
+
+    compile_timeout_s = _clamp_int(request.data.get('compile_timeout_s'), 10, 1, 30)
+    run_timeout_s = _clamp_int(request.data.get('run_timeout_s'), 2, 1, 5)
+    memory_mb = _clamp_int(request.data.get('memory_mb'), 256, 64, 1024)
+
+    compile_res, run_res = run_code(
+        language=language,
+        code=code,
+        stdin=stdin,
+        compiler=compiler,
+        compile_timeout_s=compile_timeout_s,
+        run_timeout_s=run_timeout_s,
+        memory_mb=memory_mb,
+    )
+    compiled = bool(compile_res.compiled)
+    return Response(
+        {
+            'compiled': compiled,
+            'ran': bool(run_res.ran) if compiled else False,
+            'stdout': run_res.stdout if compiled else '',
+            'stderr': run_res.stderr if compiled else compile_res.stderr,
+            'compile_exit_code': compile_res.exit_code,
+            'run_exit_code': run_res.exit_code if compiled else None,
+        }
+    )
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def run_snippet(request):
+    """
+    Запуск “черновика” без сохранения Algorithm.
+    Если язык компилируемый — компилирует перед запуском (прозрачно для клиента).
+    """
+    language = request.data.get('language') or ''
+    code = request.data.get('code')
+    if code is None or language is None:
+        return Response(
+            {'detail': 'Поля "code" и "language" обязательны.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    stdin = request.data.get('stdin') or ""
+    compiler = request.data.get('compiler') or None
+
+    if len(code or "") > MAX_REQUEST_CODE_CHARS:
+        return Response(
+            {'detail': f'Код слишком большой. Максимум {MAX_REQUEST_CODE_CHARS} символов.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    if len(stdin or "") > MAX_REQUEST_STDIN_CHARS:
+        return Response(
+            {'detail': f'Слишком большой stdin. Максимум {MAX_REQUEST_STDIN_CHARS} символов.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    def _clamp_int(val, default, lo, hi):
+        try:
+            n = int(val)
+        except Exception:
+            n = default
+        return max(lo, min(hi, n))
+
+    compile_timeout_s = _clamp_int(request.data.get('compile_timeout_s'), 10, 1, 30)
+    run_timeout_s = _clamp_int(request.data.get('run_timeout_s'), 2, 1, 5)
+    memory_mb = _clamp_int(request.data.get('memory_mb'), 256, 64, 1024)
+
+    compile_res, run_res = run_code(
+        language=language,
+        code=code,
+        stdin=stdin,
+        compiler=compiler,
+        compile_timeout_s=compile_timeout_s,
+        run_timeout_s=run_timeout_s,
+        memory_mb=memory_mb,
+    )
+    compiled = bool(compile_res.compiled)
+    return Response(
+        {
+            'compiled': compiled,
+            'ran': bool(run_res.ran) if compiled else False,
+            'stdout': run_res.stdout if compiled else '',
+            'stderr': run_res.stderr if compiled else compile_res.stderr,
+            'compile_exit_code': compile_res.exit_code,
+            'run_exit_code': run_res.exit_code if compiled else None,
+        }
+    )

@@ -32,11 +32,7 @@ const Register: React.FC = () => {
     try {
       setError('');
       setLoading(true);
-      
-      console.log('Starting registration process...');
       await register(formData);
-      
-      console.log('Registration completed, navigating to home...');
       navigate('/');
       
     } catch (error) {

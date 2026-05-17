@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import CodeMirror from '@uiw/react-codemirror';
 import { cpp } from '@codemirror/lang-cpp';
@@ -6,6 +6,12 @@ import { oneDark } from '@codemirror/theme-one-dark';
 import { apiService } from '../service/api';
 import { Algorithm } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import {
+  DEFAULT_LANGUAGE,
+  getDefaultFormCode,
+  getLanguageConfig,
+  LANGUAGE_CONFIGS,
+} from '../utils/languageConfig';
 
 const SERVICE_FEE_RUB = 100;
 
@@ -17,12 +23,12 @@ const AddAlgorithm: React.FC = () => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    code: '#include <iostream>\n#include <vector>\n\nusing namespace std;\n\n// Ваш алгоритм здесь\nvoid yourAlgorithm() {\n    // Реализация алгоритма\n    cout << "Hello, Algorithm Platform!" << endl;\n}',
+    code: getDefaultFormCode(DEFAULT_LANGUAGE),
     tags: '',
     isPaid: false,
     price: '200',
-    language: 'C++',
-    compiler: 'g++',
+    language: DEFAULT_LANGUAGE,
+    compiler: getLanguageConfig(DEFAULT_LANGUAGE).defaultCompiler,
   });
 
   const [showPrice, setShowPrice] = useState(false);
@@ -30,6 +36,15 @@ const AddAlgorithm: React.FC = () => {
   const [loadExisting, setLoadExisting] = useState(isEditMode);
   const [initialLoadError, setInitialLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [stdinValue, setStdinValue] = useState('');
+  const [runLoading, setRunLoading] = useState(false);
+  const [runError, setRunError] = useState<string | null>(null);
+  const [runResult, setRunResult] = useState<{
+    compiled: boolean;
+    ran: boolean;
+    stdout?: string;
+    stderr?: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!isEditMode || !editId || !user?.username) return;
@@ -45,6 +60,11 @@ const AddAlgorithm: React.FC = () => {
           setInitialLoadError('Вы можете редактировать только свои алгоритмы.');
           return;
         }
+        const language = existing.language || DEFAULT_LANGUAGE;
+        const langConfig = getLanguageConfig(language);
+        const compilerValid = langConfig.compilers.some(
+          (item) => item.value === existing.compiler
+        );
         setFormData({
           title: existing.title,
           description: existing.description,
@@ -52,8 +72,8 @@ const AddAlgorithm: React.FC = () => {
           tags: existing.tags?.length ? existing.tags.join(', ') : '',
           isPaid: existing.isPaid,
           price: String(existing.price ?? (existing.isPaid ? 200 : 0)),
-          language: existing.language || 'C++',
-          compiler: existing.compiler || 'g++',
+          language,
+          compiler: compilerValid ? existing.compiler! : langConfig.defaultCompiler,
         });
         setShowPrice(existing.isPaid);
       } catch (err) {
@@ -139,6 +159,18 @@ const AddAlgorithm: React.FC = () => {
     }
   };
 
+  const languageConfig = useMemo(
+    () => getLanguageConfig(formData.language),
+    [formData.language]
+  );
+
+  const codeEditorExtensions = useMemo(() => {
+    if (formData.language === 'C++') {
+      return [cpp()];
+    }
+    return [];
+  }, [formData.language]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     setFormData(prev => ({
@@ -147,11 +179,65 @@ const AddAlgorithm: React.FC = () => {
     }));
   };
 
+  const handleLanguageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const language = e.target.value;
+    const config = getLanguageConfig(language);
+    setFormData((prev) => ({
+      ...prev,
+      language,
+      compiler: config.defaultCompiler,
+      code: isEditMode ? prev.code : config.template,
+    }));
+  };
+
+  useEffect(() => {
+    const config = getLanguageConfig(formData.language);
+    const compilerValid = config.compilers.some((item) => item.value === formData.compiler);
+    if (!compilerValid) {
+      setFormData((prev) => ({ ...prev, compiler: config.defaultCompiler }));
+    }
+  }, [formData.language, formData.compiler]);
+
   const handleCodeChange = (value: string) => {
     setFormData(prev => ({
       ...prev,
       code: value
     }));
+  };
+
+  const handleRun = async () => {
+    setRunLoading(true);
+    setRunError(null);
+    setRunResult(null);
+    try {
+      const res =
+        isEditMode && editId
+          ? await apiService.runAlgorithm(editId, {
+              code: formData.code,
+              language: formData.language,
+              compiler: formData.compiler,
+              stdin: stdinValue,
+            })
+          : await apiService.runSnippet({
+              code: formData.code,
+              language: formData.language,
+              compiler: formData.compiler,
+              stdin: stdinValue,
+            });
+
+      const compiled = Boolean(res.compiled);
+      const ran = Boolean(res.ran);
+      setRunResult({
+        compiled,
+        ran,
+        stdout: res.stdout ?? '',
+        stderr: res.stderr ?? '',
+      });
+    } catch (err) {
+      setRunError(err instanceof Error ? err.message : 'Не удалось запустить алгоритм');
+    } finally {
+      setRunLoading(false);
+    }
   };
 
   const togglePaid = () => {
@@ -243,12 +329,13 @@ const AddAlgorithm: React.FC = () => {
               id="language"
               name="language"
               value={formData.language}
-              onChange={handleChange}
+              onChange={handleLanguageChange}
             >
-              <option value="C++">C/C++</option>
-              <option value="Python">Python</option>
-              <option value="JavaScript">JavaScript</option>
-              <option value="Java">Java</option>
+              {LANGUAGE_CONFIGS.map((lang) => (
+                <option key={lang.id} value={lang.id}>
+                  {lang.label}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -260,13 +347,11 @@ const AddAlgorithm: React.FC = () => {
               value={formData.compiler}
               onChange={handleChange}
             >
-              <option value="g++">g++ (GCC)</option>
-              <option value="gcc">gcc (GCC)</option>
-              <option value="clang">clang (LLVM)</option>
-              <option value="clang++">clang++ (LLVM)</option>
-              <option value="python">Python Interpreter</option>
-              <option value="node">Node.js</option>
-              <option value="java">Java Compiler</option>
+              {languageConfig.compilers.map((compiler) => (
+                <option key={compiler.value} value={compiler.value}>
+                  {compiler.label}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -278,7 +363,7 @@ const AddAlgorithm: React.FC = () => {
             <CodeMirror
               value={formData.code}
               height="400px"
-              extensions={[cpp()]}
+              extensions={codeEditorExtensions}
               theme={oneDark}
               onChange={handleCodeChange}
               basicSetup={{
@@ -298,6 +383,73 @@ const AddAlgorithm: React.FC = () => {
             </div>
           </div>
         </div>
+
+        <div className="form-group" style={{ marginTop: '-0.25rem' }}>
+            <button
+              type="button"
+              className="submit-btn"
+              onClick={handleRun}
+              disabled={runLoading || loading}
+              style={{
+                width: 'auto',
+                padding: '10px 14px',
+                marginBottom: '0.75rem',
+              }}
+            >
+              {runLoading ? 'Запуск…' : 'Запустить'}
+            </button>
+
+            <label htmlFor="stdin" style={{ display: 'block', marginBottom: 6 }}>
+              Ввод (stdin)
+            </label>
+            <textarea
+              id="stdin"
+              value={stdinValue}
+              onChange={(e) => setStdinValue(e.target.value)}
+              rows={4}
+              placeholder="То, что будет подано на stdin вашей программе"
+              style={{ width: '100%', marginBottom: 12 }}
+            />
+
+            {runError && (
+              <div className="error-message" style={{ marginTop: '0.5rem' }}>
+                <strong>Ошибка:</strong> {runError}
+              </div>
+            )}
+
+            {runResult && (
+              <div
+                style={{
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: 8,
+                  padding: 12,
+                  background: 'rgba(0,0,0,0.25)',
+                  marginTop: 12,
+                }}
+              >
+                <div style={{ marginBottom: 8 }}>
+                  <strong>Результат:</strong>{' '}
+                  <span style={{ color: runResult.compiled ? '#27ae60' : '#c0392b' }}>
+                    {runResult.compiled ? 'Выполнено' : 'Ошибка'}
+                  </span>
+                </div>
+
+                {runResult.stderr && runResult.stderr.trim() && (
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={{ fontWeight: 600, marginBottom: 6 }}>stderr</div>
+                    <pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{runResult.stderr}</pre>
+                  </div>
+                )}
+
+                {runResult.stdout && runResult.stdout.trim() && (
+                  <div>
+                    <div style={{ fontWeight: 600, marginBottom: 6 }}>stdout</div>
+                    <pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{runResult.stdout}</pre>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
         <div className="form-group">
           <label htmlFor="tags">Теги (через запятую)</label>

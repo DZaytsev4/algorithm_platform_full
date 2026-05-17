@@ -1,6 +1,8 @@
 import { Algorithm, User, AuthResponse, LoginData, RegisterData, ModeratedAlgorithm, ModerationRequest, AlgorithmPurchaseItem, PriceHistoryPoint } from '../types';
 
-const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL =
+  (import.meta as any).env?.VITE_API_BASE_URL?.toString?.() ||
+  'http://localhost:8000/api';
 
 export interface ApiAlgorithm {
   id: number;
@@ -20,6 +22,15 @@ export interface ApiAlgorithm {
   moderated_by?: string;
   moderated_at?: string;
   code_visible?: boolean;
+}
+
+export interface RunResponse {
+  compiled: boolean;
+  ran: boolean;
+  stdout?: string;
+  stderr?: string;
+  compile_exit_code?: number | null;
+  run_exit_code?: number | null;
 }
 
 class ApiService {
@@ -144,52 +155,16 @@ class ApiService {
 
   async getCurrentUser(): Promise<User> {
     const userData = await this.request<any>('/users/me/');
-    
-    // Отладочная информация
-    console.log('Raw user data from API:', userData);
-    
-    // Определяем роль пользователя
-    let userRole: User['role'] = 'consumer';
-    
-    // 1. Проверяем стандартное поле role
-    if (userData.role && (userData.role === 'moderator' || userData.role === 'admin')) {
-      userRole = userData.role;
-    }
-    // 2. Проверяем Django-specific поля
-    else if (userData.is_staff || userData.is_superuser) {
-      userRole = 'moderator';
-    }
-    // 3. Проверяем группы пользователя
-    else if (userData.groups && Array.isArray(userData.groups)) {
-      const groupNames = userData.groups.map((group: any) => 
-        typeof group === 'string' ? group.toLowerCase() : 
-        (group.name ? group.name.toLowerCase() : '')
-      );
-      
-      const moderatorGroups = [
-        'moderator', 'moderators', 'модератор', 'модераторы',
-        'admin', 'administrators', 'администратор', 'администраторы'
-      ];
-      
-      if (groupNames.some((group: string) => moderatorGroups.includes(group))) {
-        userRole = 'moderator';
-      }
-    }
-    // 4. Временная заглушка для тестирования
-    else if (['admin', 'moderator', 'testmod', 'administrator'].includes(userData.username?.toLowerCase())) {
-      userRole = 'moderator';
-    }
-    
-    console.log('Determined user role:', userRole);
-    
+
+    const role = (userData.role as User['role']) || 'consumer';
     return {
       id: userData.id?.toString() || '',
       username: userData.username || '',
       email: userData.email || '',
       first_name: userData.first_name || '',
       last_name: userData.last_name || '',
-      role: userRole,
-      // Сохраняем все данные пользователя для дополнительных проверок
+      role,
+      // Сохраняем все данные пользователя для обратной совместимости
       ...userData
     };
   }
@@ -274,6 +249,33 @@ class ApiService {
     return this.transformModeratedAlgorithm(algorithm);
   }
 
+  async runAlgorithm(
+    id: string,
+    payload: {
+      code?: string;
+      language?: string;
+      compiler?: string;
+      stdin?: string;
+    } = {}
+  ): Promise<RunResponse> {
+    return await this.request<RunResponse>(`/algorithms/${id}/run/`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async runSnippet(payload: {
+    code: string;
+    language: string;
+    compiler?: string;
+    stdin?: string;
+  }): Promise<RunResponse> {
+    return await this.request<RunResponse>(`/algorithms/run/`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
   async getMyPurchases(): Promise<AlgorithmPurchaseItem[]> {
     const rows = await this.request<any[]>('/users/me/purchases/');
     if (!Array.isArray(rows)) return [];
@@ -352,9 +354,6 @@ class ApiService {
       } else {
         algorithmsArray = Object.values(response);
       }
-      
-      console.log('Raw API response:', response);
-      console.log('Processed algorithms array:', algorithmsArray);
       
       return algorithmsArray.map(this.transformModeratedAlgorithm);
     } catch (error) {

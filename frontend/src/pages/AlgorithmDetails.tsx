@@ -17,6 +17,15 @@ const AlgorithmDetails: React.FC = () => {
   const [purchaseLoading, setPurchaseLoading] = useState(false);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
   const [priceChartNonce, setPriceChartNonce] = useState(0);
+  const [stdinValue, setStdinValue] = useState('');
+  const [runLoading, setRunLoading] = useState(false);
+  const [runError, setRunError] = useState<string | null>(null);
+  const [runResult, setRunResult] = useState<{
+    compiled: boolean;
+    ran: boolean;
+    stdout?: string;
+    stderr?: string;
+  } | null>(null);
 
   useEffect(() => {
     const fetchAlgorithm = async () => {
@@ -61,6 +70,30 @@ const AlgorithmDetails: React.FC = () => {
       setTimeout(() => setIsCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy code:', err);
+    }
+  };
+
+  const handleRun = async () => {
+    if (!id || !algorithm?.code) return;
+    setRunLoading(true);
+    setRunError(null);
+    setRunResult(null);
+    try {
+      const res = await apiService.runAlgorithm(id, {
+        language: algorithm.language,
+        compiler: algorithm.compiler,
+        stdin: stdinValue,
+      });
+      setRunResult({
+        compiled: Boolean(res.compiled),
+        ran: Boolean(res.ran),
+        stdout: res.stdout ?? '',
+        stderr: res.stderr ?? '',
+      });
+    } catch (err) {
+      setRunError(err instanceof Error ? err.message : 'Не удалось запустить алгоритм');
+    } finally {
+      setRunLoading(false);
     }
   };
 
@@ -206,6 +239,70 @@ const AlgorithmDetails: React.FC = () => {
                 <pre className="code-block">
                   <code>{algorithm.code}</code>
                 </pre>
+              </div>
+
+              <div style={{ marginTop: '1rem' }}>
+                <h3 style={{ margin: '0 0 0.5rem 0' }}>Проверка запуска</h3>
+                <label htmlFor="stdin" style={{ display: 'block', marginBottom: 6 }}>
+                  Ввод (stdin)
+                </label>
+                <textarea
+                  id="stdin"
+                  value={stdinValue}
+                  onChange={(e) => setStdinValue(e.target.value)}
+                  rows={4}
+                  placeholder="То, что будет подано на stdin вашей программе"
+                  style={{ width: '100%', marginBottom: 12 }}
+                />
+
+                <button
+                  type="button"
+                  className="buy-btn"
+                  onClick={handleRun}
+                  disabled={runLoading}
+                  style={{ width: 'auto' }}
+                >
+                  {runLoading ? 'Запуск…' : 'Запустить'}
+                </button>
+
+                {runError && (
+                  <div className="error-inline" style={{ color: '#c0392b', marginTop: '0.75rem' }}>
+                    {runError}
+                  </div>
+                )}
+
+                {runResult && (
+                  <div
+                    style={{
+                      border: '1px solid rgba(255,255,255,0.12)',
+                      borderRadius: 8,
+                      padding: 12,
+                      background: 'rgba(0,0,0,0.25)',
+                      marginTop: 12,
+                    }}
+                  >
+                    <div style={{ marginBottom: 8 }}>
+                      <strong>Результат:</strong>{' '}
+                      <span style={{ color: runResult.compiled ? '#27ae60' : '#c0392b' }}>
+                        {runResult.compiled ? 'Выполнено' : 'Ошибка'}
+                      </span>
+                    </div>
+
+                    {runResult.stderr && runResult.stderr.trim() && (
+                      <div style={{ marginBottom: 10 }}>
+                        <div style={{ fontWeight: 600, marginBottom: 6 }}>stderr</div>
+                        <pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{runResult.stderr}</pre>
+                      </div>
+                    )}
+
+                    {runResult.stdout && runResult.stdout.trim() && (
+                      <div>
+                        <div style={{ fontWeight: 600, marginBottom: 6 }}>stdout</div>
+                        <pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{runResult.stdout}</pre>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </section>
           )}
