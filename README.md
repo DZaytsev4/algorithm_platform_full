@@ -1,250 +1,153 @@
 # Algorithm Platform
 
-Платформа для работы с алгоритмами: **Django REST API** (бэкенд), **React + Vite** (веб) и **PyQt5** (десктоп). Десктоп и веб обращаются к API на `http://localhost:8000/api`.
+Платформа для работы с алгоритмами: **Django REST Framework** на бэкенде и **React + Vite** на фронтенде, оба запускаются через Docker Compose.
 
----
+## Быстрый старт
 
-## Содержание
-
-- [Что понадобится](#что-понадобится)
-- [Установка Node.js и npm](#установка-nodejs-и-npm)
-- [Зависимости Python](#зависимости-python)
-- [Запуск бэкенда](#запуск-бэкенда)
-- [Запуск веб-интерфейса (Vite)](#запуск-веб-интерфейса-vite)
-- [Запуск десктоп-приложения](#запуск-десктоп-приложения)
-- [Порты и порядок запуска](#порты-и-порядок-запуска)
-
----
-
-## Что понадобится
-
-| Компонент | Назначение |
-|-----------|------------|
-| **Python 3.9+** | бэкенд Django и десктоп PyQt5 |
-| **Node.js 18+** (вместе с **npm**) | фронтенд; **Vite** ставится локально в проект через `npm install` |
-
-Клонирование репозитория (одинаково на всех ОС):
+1. Клонируйте репозиторий:
 
 ```bash
 git clone https://github.com/DZaytsev4/algorithm_platform_full.git
 cd algorithm_platform_full
 ```
 
----
-
-## Установка Node.js и npm
-
-**Vite** указан в `frontend/package.json` как dev-зависимость — отдельно ставить Vite глобально не обязательно: после `npm install` в папке `frontend` будет использоваться локальный `vite`.
-
-### Linux (Ubuntu / Debian)
-
-Установка через пакетный менеджер или с [nodejs.org](https://nodejs.org/):
+2. Запустите все сервисы через Docker Compose:
 
 ```bash
-sudo apt update
-sudo apt install -y nodejs npm
+docker compose up --build
 ```
 
-Проверка:
+3. Откройте фронтенд в браузере:
+
+- `http://localhost:5173`
+
+4. API доступен по адресу:
+
+- `http://127.0.0.1:8000/api`
+
+## Что важно знать
+
+- `docker compose up --build` поднимает:
+  - PostgreSQL
+  - Django backend
+  - React frontend
+- Backend слушает на `http://127.0.0.1:8000`
+- Frontend слушает на `http://localhost:5173`
+- Фронтенд использует `VITE_API_BASE_URL=http://localhost:8000/api`
+
+## Работа с Docker
+
+Остановить сервисы:
 
 ```bash
-node -v
-npm -v
+docker compose down
 ```
 
-### Windows
-
-1. Скачайте установщик **LTS** с [https://nodejs.org/](https://nodejs.org/) и установите (в комплекте идёт **npm**).
-2. Откройте **PowerShell** или **cmd** и проверьте:
-
-```powershell
-node -v
-npm -v
-```
-
----
-
-## Зависимости Python
-
-Файл **`requirements.txt`** лежит в **корне** репозитория (не в `backend/`). Рекомендуется виртуальное окружение в корне проекта.
-
-### Linux
+Посмотреть логи:
 
 ```bash
-cd algorithm_platform_full
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-pip install -r requirements.txt
+docker compose logs -f
 ```
 
-### Windows (PowerShell)
-
-```powershell
-cd algorithm_platform_full
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-Если в PowerShell ругается на политику выполнения скриптов, один раз для текущего пользователя:
-
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
-
-### Windows (cmd)
-
-```cmd
-cd algorithm_platform_full
-python -m venv .venv
-.venv\Scripts\activate.bat
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-> **Десктоп (PyQt5):** если после `pip install` при запуске десктопа не хватает системных библиотек Qt, на Ubuntu попробуйте: `sudo apt install python3-pyqt5` — либо убедитесь, что используете то же venv, куда ставили зависимости из `requirements.txt`.
-
----
-
-## Запуск бэкенда
-
-По умолчанию база — **SQLite** (`backend/db.sqlite3`).
-Для **PostgreSQL** используйте переменные окружения:
-`DB_USE_POSTGRES=True`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`.
-В `docker-compose.yml` PostgreSQL уже подключен и настроен для контейнерного запуска.
-
-### Linux
+Запустить только backend:
 
 ```bash
-cd algorithm_platform_full
-source .venv/bin/activate
-cd backend
-python manage.py makemigrations
-python manage.py migrate
-python manage.py runserver 0.0.0.0:8000
+docker compose up --build backend
 ```
 
-Опционально — админка Django:
+Запустить только frontend:
 
 ```bash
-python manage.py createsuperuser
+docker compose up --build frontend
 ```
 
-### Windows (PowerShell)
+## Запуск тестов
 
-```powershell
-cd algorithm_platform_full
-.\.venv\Scripts\Activate.ps1
-cd backend
-python manage.py makemigrations
-python manage.py migrate
-python manage.py runserver
-```
-
-```powershell
-python manage.py createsuperuser
-```
-
-API будет доступен по адресу **http://127.0.0.1:8000/api** (корень сайта — **http://127.0.0.1:8000/**).
-
-### Безопасный запуск алгоритмов
-
-Запуск кода выполняется в изолированной временной директории с урезанным окружением и таймаутами.
-Дополнительно действуют ограничения по объему данных:
-- `ALGO_MAX_SOURCE_CHARS` (по умолчанию `50000`)
-- `ALGO_MAX_STDIN_CHARS` (по умолчанию `10000`)
-- `ALGO_MAX_OUTPUT_CHARS` (по умолчанию `20000`)
-
-Для Python запуск идет в изолированном режиме интерпретатора (`python -I`), а для всех языков действует базовая проверка на опасные конструкции.
-
----
-
-## Запуск веб-интерфейса (Vite)
-
-Фронтенд — папка **`frontend`**. Здесь же через **`npm install`** подтягиваются React, **Vite** (`devDependencies`) и остальные пакеты.
-
-### Linux
+Тесты выполняются внутри контейнера backend.
 
 ```bash
-cd algorithm_platform_full/frontend
-npm install
-npm run dev
+docker compose run --rm backend python manage.py test
 ```
 
-### Windows
-
-```powershell
-cd algorithm_platform_full\frontend
-npm install
-npm run dev
-```
-
-После старта откройте в браузере адрес, который покажет Vite (по настройкам проекта — **http://localhost:3000**).
-
-Сборка продакшена:
+Отдельные группы:
 
 ```bash
-npm run build
+docker compose run --rm backend python manage.py test users.tests
+docker compose run --rm backend python manage.py test algorithms.tests
 ```
 
-Просмотр собранного варианта:
+## Заполнение стартовых данных
+
+Для создания базовых пользователей и алгоритмов используйте команду:
 
 ```bash
-npm run preview
+docker compose run --rm backend python manage.py seed_initial_data
 ```
 
----
+Это создаст:
+- `admin` / `adminpass123`
+- `moderator` / `modpass123`
+- `user1` / `user1pass123`
+- `user2` / `user2pass123`
+- 5 алгоритмов: 3 бесплатных и 2 платных
 
-## Запуск десктоп-приложения
+## Доступ к базе PostgreSQL
 
-Десктоп ожидает бэкенд на **http://localhost:8000** (см. `algorithm_desktop/config.py`, поле `BASE_URL`). Сначала запустите **Django**, затем клиент.
+PostgreSQL запускается в контейнере и проброшен на локальный порт `5433`.
 
-### Linux
+Для подключения через PGAdmin используйте:
+- Host name / address: `localhost`
+- Port: `5433`
+- Maintenance database: `postgres` или `algorithm_platform`
+- Username: `algorithm_user`
+- Password: `algorithm_password`
+- Database: `algorithm_platform`
 
-```bash
-cd algorithm_platform_full
-source .venv/bin/activate
-cd algorithm_desktop
-python main.py
-```
+Если вы запускаете PGAdmin тоже в контейнере или другом сервисе внутри Docker-сети, хост может быть `postgres`.
 
-### Windows
+## Основные группы тестов
 
-```powershell
-cd algorithm_platform_full
-.\.venv\Scripts\Activate.ps1
-cd algorithm_desktop
-python main.py
-```
+### `backend/users/tests.py`
+- `UserViewsTests` — проверка API регистрации, аутентификации, профилей, поиска пользователей и доступа к алгоритмам пользователя.
+- `UserFormsTests` — валидация регистрационной формы, проверка пароля и дубликатов email.
+- `UserSerializersTests` — регистрационные сериализаторы, валидация полей и выходные данные пользователя.
 
----
+### `backend/algorithms/tests.py`
+- `AlgorithmModelTests` — тесты модели `Algorithm`, поведение статусов, теги, права редактирования, строковое представление.
+- `AlgorithmSerializerTests` — валидация сериализатора, обязательные поля, computed-поля и статус по умолчанию.
+- `PermissionTests` — логика кастомного пермишена `IsModerator`.
+- `AlgorithmBusinessLogicTests` — временные метки, модерация и отклонение алгоритмов.
+- `AlgorithmValidationTests` — проверки ограничений модели (`name`, `code` и т.п.).
+- `AlgorithmViewsTests` — интеграционные API-тесты списка, поиска, создания, редактирования, удаления, запуска алгоритма и модерации.
 
-## Порты и порядок запуска
+> Тесты бэкенда выполняются в Docker. Фронтенд в проекте не имеет отдельного набора тестов.
 
-| Сервис | URL / порт |
-|--------|------------|
-| Бэкенд Django | http://127.0.0.1:8000 |
-| Веб (Vite) | http://localhost:3000 |
-| Десктоп | подключается к API на порту **8000** |
+## CI / GitHub Actions
 
-**Рекомендуемый порядок:**
+В проекте используется GitHub Actions для автоматизированного запуска тестов и отчётности.
 
-1. Включить виртуальное окружение и запустить **`python manage.py runserver`** из `backend`.
-2. В отдельном терминале: в `frontend` выполнить **`npm install`** (один раз), затем **`npm run dev`**.
-3. Для десктопа: при работающем бэкенде запустить **`python main.py`** из `algorithm_desktop`.
+- `.github/workflows/unit-tests.yml` — Django unit-тесты для алгоритмов: модели, сериализаторы, права и бизнес-логику.
+- `.github/workflows/user-tests.yml` — проверка пользовательских сценариев API: создание, изменение и удаление алгоритмов, доступ обычных пользователей.
+- `.github/workflows/moderator-tests.yml` — модераторские сценарии: доступ к списку модерации, одобрение и отклонение.
+- `.github/workflows/search-coverage-tests.yml` — тест фильтрации поиска и полный запуск `AlgorithmViewsTests` с отчётом покрытия.
+- `.github/workflows/users-comprehensive-tests.yml` — полный набор `users` тестов, отчёт о покрытии и security scan для модуля `users`.
 
----
+> CI использует Python 3.9 и PostgreSQL в GitHub Actions, а локально проект поднимается через Docker Compose.
 
-## Краткая шпаргалка команд
+## Быстрая справка команд
 
-| Задача | Команда (из корня репозитория после активации venv) |
-|--------|-----------------------------------------------------|
-| Установить Python-зависимости | `pip install -r requirements.txt` |
-| Миграции и сервер | `cd backend` → `python manage.py migrate` → `python manage.py runserver` |
-| Установить npm-зависимости и Vite (локально) | `cd frontend` → `npm install` |
-| Дев-сервер фронта | `cd frontend` → `npm run dev` |
-| Десктоп | `cd algorithm_desktop` → `python main.py` |
+| Задача | Команда |
+|---|---|
+| Запустить проект | `docker compose up --build` |
+| Остановить проект | `docker compose down` |
+| Запустить все тесты | `docker compose run --rm backend python manage.py test` |
+| Проверить логи | `docker compose logs -f` |
+| Запустить только backend | `docker compose up --build backend` |
+| Запустить только frontend | `docker compose up --build frontend` |
 
-Во всех блоках выше используются стандартные для GitHub **многострочные блоки кода** — в интерфейсе GitHub у блока есть кнопка копирования.
+## Дополнительно
+
+- Backend и frontend запускаются через Docker Compose.
+- PostgreSQL настроен в `docker-compose.yml` и проброшен на порт `5433` локально.
+- Backend автоматически выполняет миграции через `backend/entrypoint.sh`.
+- Фронтенд использует `VITE_API_BASE_URL=http://localhost:8000/api`.
