@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiService } from '../service/api';
+import SiteFooter from '../components/SiteFooter';
 import './Auth.css';
 
 const Login: React.FC = () => {
@@ -57,43 +58,46 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-form">
-        <h2>Вход в систему</h2>
-        {error && <div className="error-message">{error}</div>}
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="username">Имя пользователя</label>
-            <input
-              type="text"
-              id="username"
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
-              required
-              disabled={loading}
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="password">Пароль</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              disabled={loading}
-            />
-          </div>
-          <button type="submit" disabled={loading} className="auth-button">
-            {loading ? 'Вход...' : 'Войти'}
-          </button>
-        </form>
-        <p className="auth-link">
-          Нет аккаунта? <Link to="/register">Зарегистрируйтесь</Link>
-        </p>
+    <div>
+      <div className="auth-container">
+        <div className="auth-form">
+          <h2>Вход в систему</h2>
+          {error && <div className="error-message">{error}</div>}
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label htmlFor="username">Имя пользователя</label>
+              <input
+                type="text"
+                id="username"
+                name="username"
+                value={formData.username}
+                onChange={handleChange}
+                required
+                disabled={loading}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="password">Пароль</label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                disabled={loading}
+              />
+            </div>
+            <button type="submit" disabled={loading} className="auth-button">
+              {loading ? 'Вход...' : 'Войти'}
+            </button>
+          </form>
+          <p className="auth-link">
+            Нет аккаунта? <Link to="/register">Зарегистрируйтесь</Link>
+          </p>
+        </div>
       </div>
+      <SiteFooter />
     </div>
   );
 };

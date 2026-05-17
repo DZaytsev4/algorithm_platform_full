@@ -1,7 +1,11 @@
 .profile-container {
-  max-width: 1200px;
-  margin: 2rem auto;
-  padding: 0 1rem;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 2rem clamp(1rem, 4vw, 3rem);
+  box-sizing: border-box;
+  min-height: calc(100vh - 80px);
+  flex: 1;
 }
 
 .profile-header {
@@ -50,9 +54,8 @@
   padding: 0.25rem;
   background: #eef2f7;
   border-radius: 12px;
-  max-width: 1200px;
-  margin-left: auto;
-  margin-right: auto;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .profile-tab {
@@ -124,8 +127,9 @@
 
 .profile-content--tabs {
   grid-template-columns: 1fr;
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: none;
+  margin: 0;
 }
 
 .purchased-details {
@@ -289,49 +293,84 @@
   font-style: italic;
 }
 
-.algorithms-list {
+/* Сетка «Мои алгоритмы» — как на главной (Home.css) */
+.profile-my-algorithms .algorithms-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: 1.5rem;
+}
+
+.profile-my-algorithms .card-meta {
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+}
+
+.profile-my-algorithms .algorithm-card.profile-algo-card--pending::before {
+  background: linear-gradient(135deg, #fbbf24, #d97706);
+}
+
+.profile-my-algorithms .algorithm-card.profile-algo-card--rejected::before {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+}
+
+.profile-algo-card-actions {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.profile-algo-card-actions .details-btn {
+  flex: 1 1 calc(50% - 0.375rem);
+  min-width: 8rem;
+  justify-content: center;
+}
+
+.details-btn.details-btn--outline {
+  background: rgba(255, 255, 255, 0.95);
+  color: #4f46e5;
+  border: 2px solid rgba(99, 102, 241, 0.45);
+  box-shadow: none;
+}
+
+.details-btn.details-btn--outline::before {
+  display: none;
+}
+
+.details-btn.details-btn--outline:hover {
+  background: #f5f3ff;
+  border-color: #6366f1;
+  color: #4338ca;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.2);
+  transform: translateY(-2px);
+}
+
+/* Купленные: прежний список-прямоугольник */
+.purchased-algorithms-section .algorithms-list {
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
 
-.algorithm-card {
+.purchased-algorithms-section .algorithm-card {
   background: #f8f9fa;
   padding: 1.5rem;
   border-radius: 8px;
   border-left: 4px solid #3498db;
 }
 
-.algorithm-card--rejected {
+.purchased-algorithms-section .algorithm-card--rejected {
   border-left-color: #e74c3c;
 }
 
-.algorithm-card h3 {
+.purchased-algorithms-section .algorithm-card h3 {
   margin: 0 0 0.5rem 0;
   color: #2c3e50;
 }
 
-.algorithm-card p {
+.purchased-algorithms-section .algorithm-card p {
   margin: 0 0 1rem 0;
   color: #555;
   line-height: 1.5;
-}
-
-.algorithm-meta {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
-  gap: 0.5rem;
-  align-items: center;
-  overflow-x: auto;
-  padding-bottom: 2px;
-  margin-bottom: 0.25rem;
-  scrollbar-width: thin;
-}
-
-.algorithm-meta > span {
-  flex-shrink: 0;
-  white-space: nowrap;
 }
 
 .rejection-notice {
@@ -382,31 +421,14 @@
   color: #721c24;
 }
 
-.price-type {
-  padding: 0.25rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
-.price-type.free {
-  background: #d5f4e6;
-  color: #27ae60;
-}
-
-.price-type.paid {
-  background: #ffeaa7;
-  color: #f39c12;
-}
-
-.algorithm-card-actions {
+.purchased-algorithms-section .algorithm-card-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
   margin-top: 1rem;
 }
 
-.algo-action-link {
+.purchased-algorithms-section .algo-action-link {
   display: inline-flex;
   align-items: center;
   padding: 0.5rem 1rem;
@@ -419,25 +441,17 @@
   transition: background 0.2s;
 }
 
-.algo-action-link:hover {
+.purchased-algorithms-section .algo-action-link:hover {
   background: #dfe6e9;
 }
 
-.algo-action-link--primary {
+.purchased-algorithms-section .algo-action-link--primary {
   background: #3498db;
   color: white;
 }
 
-.algo-action-link--primary:hover {
+.purchased-algorithms-section .algo-action-link--primary:hover {
   background: #2980b9;
-}
-
-.language {
-  background: #dfe6e9;
-  color: #2d3436;
-  padding: 0.25rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.875rem;
 }
 
 .loading {
@@ -659,6 +673,10 @@
 
 /* Адаптивность */
 @media (max-width: 768px) {
+  .profile-container {
+    padding: 1rem clamp(0.75rem, 3vw, 1.25rem);
+  }
+
   .profile-content {
     grid-template-columns: 1fr;
     gap: 2rem;

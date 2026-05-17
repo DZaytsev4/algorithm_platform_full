@@ -23,8 +23,9 @@ int solve() {
     return 0;
 }
 
+//используйте эту функцию для тестирования вашего решения
 int main() {
-    cout << solve() << endl;
+    solve();
     return 0;
 }
 `;
@@ -33,9 +34,9 @@ const PYTHON_TEMPLATE = `def solve():
     """Реализуйте алгоритм здесь."""
     return 0
 
-
+""используйте эту функцию для тестирования вашего решения"
 if __name__ == "__main__":
-    print(solve())
+    solve()
 `;
 
 const JAVA_TEMPLATE = `public class Main {
@@ -43,9 +44,9 @@ const JAVA_TEMPLATE = `public class Main {
     static int solve() {
         return 0;
     }
-
+    // используйте эту функцию для тестирования вашего решения
     public static void main(String[] args) {
-        System.out.println(solve());
+        solve();
     }
 }
 `;

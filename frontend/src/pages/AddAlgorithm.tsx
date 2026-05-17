@@ -358,7 +358,8 @@ const AddAlgorithm: React.FC = () => {
 
         <div className="form-group">
           <label htmlFor="code">Исходный код</label>
-          <div className="code-editor-container">
+          <div className="add-algorithm-code-wrap">
+            <div className="code-editor-container">
             <CodeMirror
               value={formData.code}
               height="400px"
@@ -379,6 +380,7 @@ const AddAlgorithm: React.FC = () => {
                 syntaxHighlighting: true,
               }}
             />
+            </div>
           </div>
         </div>
 
