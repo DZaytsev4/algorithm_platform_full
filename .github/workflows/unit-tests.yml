@@ -11,7 +11,17 @@ jobs:
   unit-tests:
     name: Run Django Unit Tests
     runs-on: ubuntu-latest
-    
+
+    env:
+      DB_USE_POSTGRES: "True"
+      DB_NAME: test_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DJANGO_SECRET_KEY: test-secret-key-for-github-actions
+      DJANGO_DEBUG: "False"
+
     services:
       postgres:
         image: postgres:13
@@ -42,13 +52,6 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install coverage
-
-    - name: Setup environment variables
-      working-directory: ./backend
-      run: |
-        echo "DATABASE_URL=postgres://postgres:postgres@localhost:5432/test_db" >> $GITHUB_ENV
-        echo "DEBUG=False" >> $GITHUB_ENV
-        echo "SECRET_KEY=test-secret-key-for-github-actions" >> $GITHUB_ENV
 
     - name: Run database migrations
       working-directory: ./backend

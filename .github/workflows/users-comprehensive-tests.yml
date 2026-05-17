@@ -15,7 +15,17 @@ on:
 jobs:
   run-all-users-tests:
     runs-on: ubuntu-latest
-    
+
+    env:
+      DB_USE_POSTGRES: "True"
+      DB_NAME: test_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DJANGO_SECRET_KEY: test-secret-key-for-ci
+      DJANGO_DEBUG: "False"
+
     services:
       postgres:
         image: postgres:13
@@ -52,11 +62,7 @@ jobs:
       run: |
         cd backend
         python manage.py migrate
-      env:
-        DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
-        SECRET_KEY: test-secret-key-for-ci
-        DEBUG: "False"
-    
+
     - name: Run All 25 Users Tests
       id: run-tests
       run: |
@@ -66,11 +72,7 @@ jobs:
         
         # Сохраняем количество тестов для отчета
         echo "total_tests=25" >> $GITHUB_OUTPUT
-      env:
-        DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
-        SECRET_KEY: test-secret-key-for-ci
-        DEBUG: "False"
-    
+
     - name: Generate Detailed Coverage Report
       if: github.event.inputs.detailed_report == 'true' || failure()
       run: |
@@ -84,11 +86,7 @@ jobs:
         # Показываем покрытие по файлам
         echo "=== Coverage by file ==="
         coverage report --show-missing
-      env:
-        DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
-        SECRET_KEY: test-secret-key-for-ci
-        DEBUG: "False"
-    
+
     - name: Upload Coverage Reports
       if: github.event.inputs.detailed_report == 'true' || failure()
       uses: actions/upload-artifact@v4
@@ -120,7 +118,7 @@ jobs:
         echo "=== USERS TESTS SUMMARY ==="
         echo "Total tests executed: ${{ steps.run-tests.outputs.total_tests }}"
         echo "Test suite: UserViewsTests, UserFormsTests, UserSerializersTests"
-        echo "Python version: 3.10"
+        echo "Python version: 3.9"
         echo "Database: PostgreSQL"
         echo "==========================="
         

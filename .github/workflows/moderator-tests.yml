@@ -10,7 +10,17 @@ on:
 jobs:
   moderator-tests:
     runs-on: ubuntu-latest
-    
+
+    env:
+      DB_USE_POSTGRES: "True"
+      DB_NAME: test_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DJANGO_SECRET_KEY: test-secret-key-for-github-actions
+      DJANGO_DEBUG: "False"
+
     services:
       postgres:
         image: postgres:13
@@ -39,10 +49,7 @@ jobs:
       run: |
         cd backend
         python manage.py migrate
-      env:
-        DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
-        SECRET_KEY: test-secret-key
-    
+
     - name: Run Moderator Tests
       run: |
         cd backend
@@ -51,7 +58,3 @@ jobs:
                                algorithms.tests.AlgorithmViewsTests.test_approve_algorithm_by_moderator \
                                algorithms.tests.AlgorithmViewsTests.test_reject_algorithm_by_moderator \
           --verbosity=2
-      env:
-        DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
-        SECRET_KEY: test-secret-key
-        DEBUG: "False"
